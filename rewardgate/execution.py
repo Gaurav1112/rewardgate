@@ -24,6 +24,9 @@ DEFAULT_TIMEOUT_SECONDS = 120
 class TestOutcome:
     """Result of running one test directory against one tree state."""
 
+    # Stops pytest collecting this as a test class on account of its name.
+    __test__ = False
+
     exit_code: int
     passed: int
     failed: int
