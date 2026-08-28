@@ -12,6 +12,7 @@ from __future__ import annotations
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -124,7 +125,11 @@ class MaterialisedBundle:
         """Run pytest over `test_dir` with the bundle's `src` importable."""
         try:
             result = _run(
-                ["python", "-m", "pytest", str(test_dir), "-q", "--no-header", "-p", "no:cacheprovider"],
+                # sys.executable, not "python": an ambient interpreter without pytest would make
+                # every trial fail identically, which reads as "unsolvable task" rather than
+                # "broken harness".
+                [sys.executable, "-m", "pytest", str(test_dir), "-q", "--no-header",
+                 "-p", "no:cacheprovider"],
                 self.repo,
                 timeout=timeout,
                 env=self._test_env(),
@@ -147,7 +152,14 @@ def materialise(bundle_dir: Path) -> tempfile.TemporaryDirectory:
     `with materialise(d) as tmp:` and wrap the path in `MaterialisedBundle`.
     """
     tmp = tempfile.TemporaryDirectory(prefix="rewardgate-")
-    shutil.copytree(bundle_dir, Path(tmp.name) / "repo", dirs_exist_ok=True)
+    # Excluding bytecode caches is not tidiness. A stale __pycache__ copied into the fresh tree
+    # shadows the patched source, so trials intermittently execute the previous run's code.
+    shutil.copytree(
+        bundle_dir,
+        Path(tmp.name) / "repo",
+        dirs_exist_ok=True,
+        ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".pytest_cache"),
+    )
     repo = Path(tmp.name) / "repo"
 
     if not (repo / ".git").exists():

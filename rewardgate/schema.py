@@ -20,6 +20,12 @@ DEFECT_CLASSES: tuple[str, ...] = (NOP_PASS, REWARD_HACKABLE, CONTAMINATION_GIT)
 
 ACCEPT, REVISE, REJECT = "ACCEPT", "REVISE", "REJECT"
 
+# A fourth verdict, because the other three all assert something. When a check could not run —
+# the gold patch will not apply, git history is unreadable, the exploit trial errored — the honest
+# answer is neither "sound" nor "defective". Without this, every failure resolved to ACCEPT, so a
+# broken harness silently certified a task as fine.
+INDETERMINATE = "INDETERMINATE"
+
 DEFECT_DESCRIPTIONS = {
     NOP_PASS: (
         "The fail-to-pass test suite already passes without any fix applied, so the task rewards "

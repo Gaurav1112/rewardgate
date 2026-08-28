@@ -43,7 +43,7 @@ improvement](#measured-improvement).
 **A contractor paid per accepted task to author agentic coding benchmarks.** Surge AI advertises
 [$100–150+/hr for "Agentic Coding RL Environments"](https://surgehq.ai/swe); Mercor runs a
 [Quality Control Academy](https://work.mercor.com/jobs/list_AAABmz5zP3ryQLdyseVDjb2O/quality-control-academy-fellowship)
-training auditors to catch "overspecification… and gameable shortcuts"; xAI, Handshake and micro1
+training auditors to catch "overspecification"; xAI, Handshake and micro1
 staff equivalent roles. These people are paid for *accepted* work and personally absorb every
 rejection.
 

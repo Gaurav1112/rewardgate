@@ -33,6 +33,7 @@ VERDICT_STYLE = {
     ACCEPT: ("ACCEPT", "the reward gate holds and no defect was proven"),
     "REVISE": ("REVISE", "repairable — the task measures something, but weakly"),
     REJECT: ("REJECT", "the task cannot measure what it claims"),
+    "INDETERMINATE": ("INDETERMINATE", "a check could not run — no verdict is claimed"),
 }
 
 
@@ -137,6 +138,8 @@ def cmd_audit(args: argparse.Namespace) -> int:
 
     audit, trace = audit_bundle(bundle_dir, run_exploit=not args.no_exploit)
     print(render_report(audit, trace, bundle_dir))
+    if audit.error:
+        print(f"  BLOCKED: {audit.error}\n")
     # Non-zero exit on a defect, so this can gate a CI pipeline.
     return 0 if audit.verdict == ACCEPT else 1
 

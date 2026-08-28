@@ -25,6 +25,7 @@ from rewardgate.exploit import ExploitResult, run_exploit_trial
 from rewardgate.gates import RewardGateResult, read_patch, run_reward_gate
 from rewardgate.schema import (
     ACCEPT,
+    INDETERMINATE,
     CONTAMINATION_GIT,
     NOP_PASS,
     REJECT,
@@ -43,17 +44,22 @@ class AuditTrace:
     exploit: ExploitResult | None
 
 
-def decide_verdict(defects: dict[str, bool]) -> str:
+def decide_verdict(defects: dict[str, bool], blockers: tuple[str, ...] = ()) -> str:
     """Map defects to a reviewer verdict.
 
     NOP_PASS and CONTAMINATION_GIT are disqualifying: the task cannot measure what it claims, and
     no amount of rewriting the instruction fixes that. REWARD_HACKABLE is repairable — adding
     test inputs is a normal revision — so it returns REVISE rather than REJECT.
+
+    `blockers` are checks that could not run. They take precedence over ACCEPT: a verdict of
+    "sound" must never be the consequence of a check failing to execute.
     """
     if defects.get(NOP_PASS) or defects.get(CONTAMINATION_GIT):
         return REJECT
     if defects.get(REWARD_HACKABLE):
         return REVISE
+    if blockers:
+        return INDETERMINATE
     return ACCEPT
 
 
@@ -91,12 +97,24 @@ def audit_bundle(
         REWARD_HACKABLE: exploit.reason if exploit else "exploit trial not run",
     }
 
+    # Checks that could not run. Each would otherwise have defaulted to "no defect found".
+    blockers: list[str] = []
+    if gate.patch_error:
+        blockers.append(f"gold patch did not apply: {gate.patch_error}")
+    elif gate.is_unsolvable_defect:
+        blockers.append(f"gold patch does not make the suite pass ({gate.oracle.summary})")
+    if getattr(contamination, "indeterminate", False):
+        blockers.append(contamination.reason)
+    if exploit is not None and exploit.error:
+        blockers.append(f"exploit trial failed: {exploit.error}")
+
     audit = Audit(
         bundle_id=bundle_id,
         defects=defects,
         evidence=evidence,
-        verdict=decide_verdict(defects),
+        verdict=decide_verdict(defects, tuple(blockers)),
         cost_usd=exploit.cost_usd if exploit else 0.0,
         duration_ms=exploit.duration_ms if exploit else 0,
+        error="; ".join(blockers),
     )
     return audit, AuditTrace(gate=gate, contamination=contamination, exploit=exploit)
