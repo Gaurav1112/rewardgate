@@ -46,6 +46,7 @@ class ContaminationFinding:
     total_solution_lines: int = 0
     commits: tuple[str, ...] = field(default_factory=tuple)
     has_git: bool = False
+    on_current_branch: bool = False
 
     @property
     def contaminated(self) -> bool:
@@ -53,8 +54,14 @@ class ContaminationFinding:
 
     @property
     def visible_in_shortlog(self) -> bool:
-        """Whether a reviewer skimming `git log --oneline` would have seen it."""
-        return any("[shortlog]" in c for c in self.commits)
+        """Whether a reviewer skimming the default `git log` would have seen the *fix*.
+
+        This asks whether the disclosed content is reachable from the current branch, not whether
+        any commit happens to be. An earlier version checked the latter and reported a
+        side-branch fix as "visible in the short log" while simultaneously listing that commit as
+        hidden — the report contradicted itself.
+        """
+        return self.on_current_branch
 
     @property
     def reason(self) -> str:
@@ -87,21 +94,23 @@ def detect_git_contamination(bundle_dir: Path, solution_patch: str) -> Contamina
     if not solution_lines:
         return ContaminationFinding(has_git=True)
 
-    # --all covers every ref, which is what surfaces a fix that was committed then reverted.
-    history = _git(["log", "-p", "--all"], bundle_dir)
-    added_in_history = {
-        _normalise(line[1:])
-        for line in history.splitlines()
-        if line.startswith("+") and not line.startswith("+++")
-    }
-    disclosed = solution_lines & added_in_history
+    def added_lines_in(args: list[str]) -> set[str]:
+        return {
+            _normalise(line[1:])
+            for line in _git(args, bundle_dir).splitlines()
+            if line.startswith("+") and not line.startswith("+++")
+        }
+
+    # --all walks every ref, which is what surfaces a fix parked on a side branch.
+    disclosed = solution_lines & added_lines_in(["log", "-p", "--all"])
+    # The current branch alone is what a reviewer sees by default.
+    on_current = bool(solution_lines & added_lines_in(["log", "-p"]))
 
     commits: list[str] = []
     if disclosed:
-        shortlog = _git(["log", "--oneline", "--all"], bundle_dir)
-        current = _git(["log", "--oneline"], bundle_dir)
-        for line in shortlog.splitlines():
-            marker = "[shortlog]" if line in current.splitlines() else "[hidden]"
+        current_lines = set(_git(["log", "--oneline"], bundle_dir).splitlines())
+        for line in _git(["log", "--oneline", "--all"], bundle_dir).splitlines():
+            marker = "[shortlog]" if line in current_lines else "[hidden]"
             commits.append(f"{marker} {line}")
 
     return ContaminationFinding(
@@ -109,4 +118,5 @@ def detect_git_contamination(bundle_dir: Path, solution_patch: str) -> Contamina
         total_solution_lines=len(solution_lines),
         commits=tuple(commits),
         has_git=True,
+        on_current_branch=on_current,
     )

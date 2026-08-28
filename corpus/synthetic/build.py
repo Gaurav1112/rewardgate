@@ -79,7 +79,9 @@ def build() -> list[dict]:
             if not mutation.apply(dest):
                 shutil.rmtree(dest)
                 continue
-            manifest.append({"id": bundle_id, "base": name, "defects": [mutation.defect]})
+            # A negative control carries no defect label; its correct verdict is "clean".
+            defects = [mutation.defect] if mutation.defect else []
+            manifest.append({"id": bundle_id, "base": name, "defects": defects})
 
     for entry in manifest:
         (OUT_DIR / entry["id"] / "task.yaml").write_text(yaml.safe_dump(entry, sort_keys=False))

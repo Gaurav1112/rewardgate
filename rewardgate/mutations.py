@@ -99,11 +99,19 @@ def inject_reward_hackable(bundle: Path) -> bool:
 
 
 def inject_git_contamination(bundle: Path) -> bool:
-    """Commit the fix, then revert it.
+    """Commit the fix on a side branch, then return the default branch to the unfixed state.
 
-    The hard case. `git log --oneline` shows only innocuous commits and the working tree is
-    correctly unfixed, but the solution is still recoverable via `git log -p --all`. A reviewer
-    checking whether `.git` merely *exists* passes this task; one checking its *content* does not.
+    The hard case, and the reason it is hard is a reviewer habit rather than a git trick.
+    `git log --oneline` shows the *current branch*, which here contains only an innocent import
+    commit, and the working tree is correctly unfixed. The fix is still fully recoverable via
+    `git log -p --all`, which walks every ref.
+
+    A reviewer who checks whether `.git` merely *exists* passes this task. So does one who skims
+    the default log. Only inspecting history *by content, across all refs* catches it.
+
+    An earlier version of this mutation committed the fix and then reverted it, which left the fix
+    commit plainly visible in `git log --oneline` — it did not model the intended failure mode at
+    all. The tool's own report surfaced that, because it prints the commits rather than a boolean.
     """
     patch = bundle / "solution.patch"
     if not patch.exists() or not patch.read_text().strip():
@@ -113,17 +121,60 @@ def inject_git_contamination(bundle: Path) -> bool:
     _git(["add", "-A"], bundle)
     _git(["commit", "-q", "-m", "initial import"], bundle)
 
+    default_branch = _git(["symbolic-ref", "--short", "HEAD"], bundle).stdout.strip() or "main"
+
+    _git(["checkout", "-q", "-b", "hotfix/parsing"], bundle)
     if _git(["apply", str(patch)], bundle).returncode != 0:
         return False
     _git(["add", "-A"], bundle)
     _git(["commit", "-q", "-m", "fix parsing of quoted delimiters"], bundle)
 
-    _git(["revert", "--no-edit", "-n", "HEAD"], bundle)
-    _git(["commit", "-q", "-m", "chore: tidy imports"], bundle)
+    # Back to the unfixed default branch. The side branch is left in place, so the fix stays
+    # reachable from `--all` but absent from the default log.
+    _git(["checkout", "-q", default_branch], bundle)
+    return True
+
+
+def inject_clean_git_history(bundle: Path) -> bool:
+    """Give the bundle a real multi-commit history that does NOT contain the fix.
+
+    This is a **negative control**, and without it the contamination number is meaningless.
+
+    If the only bundles carrying a `.git` directory are the contaminated ones, then a checker that
+    merely answers "does `.git` exist?" scores a perfect F1 — and nothing in the corpus can tell
+    that apart from a checker that actually reads history. This variant carries several ordinary
+    commits touching docs and tests, so `.git` is present and the correct answer is still *clean*.
+
+    Labelled with no defects: shipping history is normal and good practice. Only history
+    *containing the solution* is a defect.
+    """
+    if (bundle / ".git").exists():
+        return False
+
+    _git(["init", "-q"], bundle)
+    _git(["add", "-A"], bundle)
+    _git(["commit", "-q", "-m", "initial import"], bundle)
+
+    readme = bundle / "NOTES.md"
+    for message, text in (
+        ("docs: note the reported defect", "Reported by a downstream user.\n"),
+        ("docs: record reproduction steps", "Reported by a downstream user.\n\nRun the test suite.\n"),
+        ("chore: clarify wording", "Reported downstream.\n\nRun the test suite to reproduce.\n"),
+    ):
+        readme.write_text(text)
+        _git(["add", "-A"], bundle)
+        _git(["commit", "-q", "-m", message], bundle)
+
     return True
 
 
 MUTATIONS: list[Mutation] = [
+    Mutation(
+        slug="clean-git-history",
+        defect="",  # negative control: history present, no defect
+        description="real git history present that does not contain the fix",
+        apply=inject_clean_git_history,
+    ),
     Mutation(
         slug="nop-pass",
         defect=NOP_PASS,
