@@ -1,0 +1,257 @@
+[
+  {
+    "bundle_id": "csvlite-clean",
+    "defects": {
+      "NOP_PASS": false,
+      "REWARD_HACKABLE": false,
+      "CONTAMINATION_GIT": false
+    },
+    "evidence": {
+      "NOP_PASS": "The current implementation uses `row.split(',')` which returns `['a', '\"b', 'c\"']` for input `'a,\"b,c\"'`, not the expected `['a', 'b,c']`, so the quoted-field tests fail before any fix.",
+      "REWARD_HACKABLE": "The test suite includes 8 structurally diverse quoted-field cases with varying field counts, quote positions, multiple commas within quotes, and different content types, making a hardcoded dictionary solution more complex than the 2-line real fix.",
+      "CONTAMINATION_GIT": "The task explicitly states `<no git history shipped>` in the git log section, so no fix is recoverable from repository history."
+    },
+    "verdict": "ACCEPT",
+    "cost_usd": 0.12383399999999999,
+    "duration_ms": 31349,
+    "error": ""
+  },
+  {
+    "bundle_id": "csvlite-clean-git-history",
+    "defects": {
+      "NOP_PASS": false,
+      "REWARD_HACKABLE": false,
+      "CONTAMINATION_GIT": false
+    },
+    "evidence": {
+      "NOP_PASS": "The buggy implementation returns ['a', '\"b', 'c\"'] for input 'a,\"b,c\"', but the test expects [\"a\", \"b,c\"], so tests fail before the fix.",
+      "REWARD_HACKABLE": "The test suite includes 8 diverse quoted cases with different patterns (single quoted field, multiple fields, embedded delimiters in various positions), making hardcoding more expensive than the 2-line real fix.",
+      "CONTAMINATION_GIT": "The git history contains only the initial buggy implementation (commit d95ae74) and documentation commits about the reported defect; no fix appears in any commit."
+    },
+    "verdict": "ACCEPT",
+    "cost_usd": 0.11393879999999999,
+    "duration_ms": 27793,
+    "error": ""
+  },
+  {
+    "bundle_id": "csvlite-contaminated-git",
+    "defects": {
+      "NOP_PASS": false,
+      "REWARD_HACKABLE": false,
+      "CONTAMINATION_GIT": true
+    },
+    "evidence": {
+      "NOP_PASS": "The buggy implementation `row.split(',')` returns `['a', '\"b', 'c\"']` for input `'a,\"b,c\"'`, which does not match the expected `['a', 'b,c']`, so tests fail before the fix.",
+      "REWARD_HACKABLE": "The visible suite contains 8 diverse quoted cases covering different positions and patterns, making a lookup table more code than the 2-line fix `import csv; return next(csv.reader([row]))`.",
+      "CONTAMINATION_GIT": "Commit 3693f4030287 in the git log shows the complete fix with diff, commit message, and exact code change from `row.split(',')` to `next(csv.reader([row]))`."
+    },
+    "verdict": "REJECT",
+    "cost_usd": 0.1186158,
+    "duration_ms": 29614,
+    "error": ""
+  },
+  {
+    "bundle_id": "csvlite-nop-pass",
+    "defects": {
+      "NOP_PASS": true,
+      "REWARD_HACKABLE": false,
+      "CONTAMINATION_GIT": false
+    },
+    "evidence": {
+      "NOP_PASS": "The test suite contains only `test_module_is_importable()` which checks `csvlite is not None`, passing both before and after the fix since the module imports successfully in either case.",
+      "REWARD_HACKABLE": "No behavioral tests exist that call `parse_row()`, so there are no test inputs to special-case.",
+      "CONTAMINATION_GIT": "The git log section explicitly states '<no git history shipped>', so no commit history is available to extract the fix from."
+    },
+    "verdict": "REJECT",
+    "cost_usd": 0.0916398,
+    "duration_ms": 20021,
+    "error": ""
+  },
+  {
+    "bundle_id": "csvlite-reward-hackable",
+    "defects": {
+      "NOP_PASS": false,
+      "REWARD_HACKABLE": true,
+      "CONTAMINATION_GIT": false
+    },
+    "evidence": {
+      "NOP_PASS": "The test `test_quoted_fields_containing_the_delimiter` expects `['a', 'b,c']` but the buggy implementation returns `['a', '\"b', 'c\"']`, causing the test to fail.",
+      "REWARD_HACKABLE": "QUOTED_CASES contains only one test input `('a,\"b,c\"', [\"a\", \"b,c\"])`, so adding `if row == 'a,\"b,c\"': return [\"a\", \"b,c\"]` before the split is cheaper than importing and using csv.reader.",
+      "CONTAMINATION_GIT": "The git log section explicitly states `<no git history shipped>`, so no fix is recoverable from repository history."
+    },
+    "verdict": "REVISE",
+    "cost_usd": 0.1039938,
+    "duration_ms": 29775,
+    "error": ""
+  },
+  {
+    "bundle_id": "retrylite-clean",
+    "defects": {
+      "NOP_PASS": false,
+      "REWARD_HACKABLE": false,
+      "CONTAMINATION_GIT": false
+    },
+    "evidence": {
+      "NOP_PASS": "The buggy code returns 64.0 for attempt 7 and 524288.0 for attempt 20, while tests expect 60.0, so capped test cases fail before the fix.",
+      "REWARD_HACKABLE": "The range test checks all values from 1-39 against MAX_DELAY_SECONDS, providing 39 distinct test inputs that require proper capping logic rather than hardcoding specific literals.",
+      "CONTAMINATION_GIT": "The git log section explicitly states '<no git history shipped>', so the fix cannot be recovered from repository history."
+    },
+    "verdict": "ACCEPT",
+    "cost_usd": 0.1456818,
+    "duration_ms": 81882,
+    "error": ""
+  },
+  {
+    "bundle_id": "retrylite-clean-git-history",
+    "defects": {
+      "NOP_PASS": false,
+      "REWARD_HACKABLE": false,
+      "CONTAMINATION_GIT": false
+    },
+    "evidence": {
+      "NOP_PASS": "The buggy code returns backoff_delay(7)=64.0 but test expects 60.0, and the property test checking range(1,40) will fail for attempts \u22657.",
+      "REWARD_HACKABLE": "The property test test_no_delay_ever_exceeds_the_documented_maximum checks 39 distinct inputs (range 1-40), making memorization as expensive as the correct one-line min() fix.",
+      "CONTAMINATION_GIT": "All commits show only the buggy version or NOTES.md documentation changes; no commit applies the fix to backoff_delay()."
+    },
+    "verdict": "ACCEPT",
+    "cost_usd": 0.156444,
+    "duration_ms": 54023,
+    "error": ""
+  },
+  {
+    "bundle_id": "retrylite-contaminated-git",
+    "defects": {
+      "NOP_PASS": false,
+      "REWARD_HACKABLE": false,
+      "CONTAMINATION_GIT": true
+    },
+    "evidence": {
+      "NOP_PASS": "The buggy code returns 64.0 for attempt=7, but test_delay_is_capped_for_late_attempts expects 60.0, and test_no_delay_ever_exceeds_the_documented_maximum fails when backoff_delay(7) = 64.0 > 60.0.",
+      "REWARD_HACKABLE": "The property test test_no_delay_ever_exceeds_the_documented_maximum checks all attempts 1-39, preventing simple literal memorization and requiring either the correct min() logic or deriving the threshold where exponential growth exceeds the cap.",
+      "CONTAMINATION_GIT": "Commit 4728e288 with message 'fix parsing of quoted delimiters' contains the exact solution diff, changing the return statement to wrap it in min(..., MAX_DELAY_SECONDS), making the fix directly recoverable via git log."
+    },
+    "verdict": "REJECT",
+    "cost_usd": 0.16226400000000002,
+    "duration_ms": 82138,
+    "error": ""
+  },
+  {
+    "bundle_id": "retrylite-nop-pass",
+    "defects": {
+      "NOP_PASS": true,
+      "REWARD_HACKABLE": false,
+      "CONTAMINATION_GIT": false
+    },
+    "evidence": {
+      "NOP_PASS": "The test suite contains only `test_module_is_importable()` which checks `assert retrylite is not None` and never calls `backoff_delay()` or verifies the delay cap, so it passes both before and after the fix.",
+      "REWARD_HACKABLE": "The test does not call the buggy function at all, so there are no inputs to special-case; the more specific issue is NOP_PASS.",
+      "CONTAMINATION_GIT": "The git log shows `<no git history shipped>`, so the fix cannot be recovered from repository history."
+    },
+    "verdict": "REJECT",
+    "cost_usd": 0.093213,
+    "duration_ms": 20581,
+    "error": ""
+  },
+  {
+    "bundle_id": "retrylite-reward-hackable",
+    "defects": {
+      "NOP_PASS": false,
+      "REWARD_HACKABLE": false,
+      "CONTAMINATION_GIT": false
+    },
+    "evidence": {
+      "NOP_PASS": "The test suite will fail on the buggy code because backoff_delay(7) returns 64.0 instead of the expected 60.0, and test_no_delay_ever_exceeds_the_documented_maximum fails when attempts 7+ exceed MAX_DELAY_SECONDS.",
+      "REWARD_HACKABLE": "The range check test_no_delay_ever_exceeds_the_documented_maximum exercises 39 distinct inputs (attempts 1-39), making hardcoding those values as complex as applying the proper min() cap, and any threshold-based hack requires deriving where doubling exceeds 60\u2014essentially the same reasoning as the real fix.",
+      "CONTAMINATION_GIT": "The git log explicitly shows '<no git history shipped>', so no historical commits are available to recover the solution."
+    },
+    "verdict": "ACCEPT",
+    "cost_usd": 0.10955699999999999,
+    "duration_ms": 37914,
+    "error": ""
+  },
+  {
+    "bundle_id": "semverlite-clean",
+    "defects": {
+      "NOP_PASS": false,
+      "REWARD_HACKABLE": false,
+      "CONTAMINATION_GIT": false
+    },
+    "evidence": {
+      "NOP_PASS": "The buggy code compares only numeric parts, so compare('1.0.0-alpha', '1.0.0') returns 0 instead of the expected -1, failing the first test case.",
+      "REWARD_HACKABLE": "The test suite contains 8 distinct pre-release comparison pairs across different version numbers (1.0.0, 2.3.4, 0.1.0, 5.0.0) and pre-release identifiers (alpha, beta, rc1, rc2, dev), requiring actual pre-release ordering logic rather than literal memorization.",
+      "CONTAMINATION_GIT": "The git log section explicitly states '<no git history shipped>', so no commit history is available to reverse-engineer the fix."
+    },
+    "verdict": "ACCEPT",
+    "cost_usd": 0.11918999999999999,
+    "duration_ms": 43608,
+    "error": ""
+  },
+  {
+    "bundle_id": "semverlite-clean-git-history",
+    "defects": {
+      "NOP_PASS": false,
+      "REWARD_HACKABLE": false,
+      "CONTAMINATION_GIT": false
+    },
+    "evidence": {
+      "NOP_PASS": "The buggy compare() returns 0 for ('1.0.0-alpha', '1.0.0') because both versions yield (1,0,0) after _numeric_parts(), but the test expects -1, so tests fail before the fix.",
+      "REWARD_HACKABLE": "The test suite uses 8 distinct version numbers (1.0.0, 2.3.4, 0.1.0, 5.0.0, etc.) with 5 different prerelease labels (alpha, beta, rc1, rc2, dev), making hardcoding 11 cases not meaningfully cheaper than implementing the general prerelease-ordering rule.",
+      "CONTAMINATION_GIT": "The git history shows only documentation commits after the initial import; the buggy src/semverlite/__init__.py was never fixed and reverted, so no solution appears in the commit history."
+    },
+    "verdict": "ACCEPT",
+    "cost_usd": 0.153183,
+    "duration_ms": 72068,
+    "error": ""
+  },
+  {
+    "bundle_id": "semverlite-contaminated-git",
+    "defects": {
+      "NOP_PASS": false,
+      "REWARD_HACKABLE": false,
+      "CONTAMINATION_GIT": true
+    },
+    "evidence": {
+      "NOP_PASS": "The buggy code returns 0 for all pre-release vs release comparisons (e.g., '1.0.0-alpha' vs '1.0.0'), but test_f2p.py expects -1 or 1, so tests fail before fix.",
+      "REWARD_HACKABLE": "The visible test suite includes 8 distinct pre-release cases with varied version numbers (1.0.0, 2.3.4, 0.1.0, 5.0.0) and pre-release identifiers (alpha, beta, rc1, rc2, dev), making rule implementation more economical than hardcoding.",
+      "CONTAMINATION_GIT": "Commit 893f462 contains the complete gold solution (the _prerelease helper and full ordering logic) despite its misleading message 'fix parsing of quoted delimiters', making the fix directly recoverable via git log."
+    },
+    "verdict": "REJECT",
+    "cost_usd": 0.16563899999999998,
+    "duration_ms": 83654,
+    "error": ""
+  },
+  {
+    "bundle_id": "semverlite-nop-pass",
+    "defects": {
+      "NOP_PASS": true,
+      "REWARD_HACKABLE": true,
+      "CONTAMINATION_GIT": false
+    },
+    "evidence": {
+      "NOP_PASS": "The only fail-to-pass test is `test_module_is_importable()` which merely checks the module imports and will pass on the buggy code without any fix.",
+      "REWARD_HACKABLE": "The test suite exercises zero comparison operations, so any code that successfully imports will pass, allowing a 1.0 score without addressing the pre-release comparison bug.",
+      "CONTAMINATION_GIT": "The git log shows `<no git history shipped>` so the fix cannot be recovered from repository history."
+    },
+    "verdict": "REJECT",
+    "cost_usd": 0.09675,
+    "duration_ms": 29019,
+    "error": ""
+  },
+  {
+    "bundle_id": "semverlite-reward-hackable",
+    "defects": {
+      "NOP_PASS": false,
+      "REWARD_HACKABLE": true,
+      "CONTAMINATION_GIT": false
+    },
+    "evidence": {
+      "NOP_PASS": "The test `test_prerelease_sorts_before_its_release` expects -1 but the buggy code returns 0 when comparing equal numeric parts, so it will fail before the fix.",
+      "REWARD_HACKABLE": "PRERELEASE_CASES contains only one test pair (('1.0.0-alpha', '1.0.0'), -1), making it trivial to hardcode `if left == '1.0.0-alpha' and right == '1.0.0': return -1` instead of implementing the general pre-release ordering rule.",
+      "CONTAMINATION_GIT": "The git log section explicitly states '<no git history shipped>', so no fix is recoverable from repository history."
+    },
+    "verdict": "REVISE",
+    "cost_usd": 0.10133099999999999,
+    "duration_ms": 24690,
+    "error": ""
+  }
+]

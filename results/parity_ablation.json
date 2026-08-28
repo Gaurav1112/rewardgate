@@ -1,0 +1,20 @@
+{
+  "baseline (git log --oneline)": {
+    "macro_f1": 0.6,
+    "contamination_f1": 0.0,
+    "exact_match": 11,
+    "cost_usd": 1.7606
+  },
+  "baseline (git log -p --all)": {
+    "macro_f1": 0.8889,
+    "contamination_f1": 1.0,
+    "exact_match": 13,
+    "cost_usd": 1.8553
+  },
+  "RewardGate": {
+    "macro_f1": 0.9333,
+    "contamination_f1": 1.0,
+    "exact_match": 14,
+    "cost_usd": 3.8271
+  }
+}

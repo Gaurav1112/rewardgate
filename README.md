@@ -205,12 +205,44 @@ for p < 0.05. This design produced three. The experiment cannot reach significan
 that is a property of using 15 bundles built from **3 independent base repositories**, not a
 property of the result. "1.000 precision" is consistent with a true false-alarm rate up to 46%.
 
+### The ablation that refutes the headline
+
+Two reviewers independently said the same thing: the baseline is shown `git log --oneline`, while
+the contaminating commit sits off the current branch **by construction**. So its 0.000 might be an
+artefact of what I showed it rather than a capability gap. That is a testable objection, so I
+tested it — `uv run python scripts/run_parity_ablation.py`, results in
+[`results/parity_ablation.json`](results/parity_ablation.json).
+
+| System | macro-F1 | CONTAMINATION_GIT F1 | exact-match |
+|---|---:|---:|---:|
+| baseline, `git log --oneline` | 0.600 | 0.000 | 11/15 |
+| **baseline, `git log -p --all`** | **0.889** | **1.000** | **13/15** |
+| RewardGate | 0.933 | 1.000 | 14/15 |
+
+**Given the same evidence, the baseline detects contamination perfectly — 1.000, identical to
+RewardGate.** The headline gap collapses from **0.333 to 0.044**, which is one judgement out of 45.
+
+So the honest conclusion is stronger than the one I started with and worse for my own system: the
+measured advantage was **an information asymmetry I designed**, not a capability difference. An LLM
+shown the right `git` output finds the fix on the side branch without any help from me.
+
+What survives is smaller and duller: the pipeline *runs the right command by default*, deterministically,
+for $0.00, and attaches the commit SHA. The baseline only matched it because I hand-fed it 10 KB of
+`git log -p --all` in the prompt — at higher token cost, with no artifact, and only because I already
+knew which command to run.
+
 ### So what does this project actually establish?
 
-Honestly: **that most of this job does not need an agent.** Two of three defect classes are settled
-as well by reading as by executing, and the only reliable win is a deterministic history scan. That
-is a negative result about agents, obtained by measuring rather than assuming — and it is the
-finding I would carry to a team building RL environments, because it says where to spend.
+Honestly: **that almost none of this job needs an agent, and the part that does is not the part I
+built.** All three defect classes are settled as well by a well-informed reader as by my pipeline.
+The agent ties on its own class; the deterministic checks tie once the baseline sees the same
+evidence. That is a negative result about agents, obtained by running the experiment that could
+refute it — and it is the finding I would carry to a team building RL environments, because it says
+where *not* to spend.
+
+The residual value is not intelligence, it is **defaults and artifacts**: knowing which command to
+run, running it every time without being prompted, and emitting a commit SHA a reviewer can check
+rather than a sentence they have to trust.
 
 What the agent *does* contribute is not in this table: it produces **executed proof** rather than a
 judgement. When it flags a task, it hands you a patch and two exit codes instead of an opinion. On

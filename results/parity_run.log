@@ -4,3 +4,20 @@
   [parity 4/15] csvlite-nop-pass
   [parity 5/15] csvlite-reward-hackable
   [parity 6/15] retrylite-clean
+  [parity 7/15] retrylite-clean-git-history
+  [parity 8/15] retrylite-contaminated-git
+  [parity 9/15] retrylite-nop-pass
+  [parity 10/15] retrylite-reward-hackable
+  [parity 11/15] semverlite-clean
+  [parity 12/15] semverlite-clean-git-history
+  [parity 13/15] semverlite-contaminated-git
+  [parity 14/15] semverlite-nop-pass
+  [parity 15/15] semverlite-reward-hackable
+
+SYSTEM                            macro-F1   CONTAM F1   exact      cost
+========================================================================
+baseline (git log --oneline)         0.600       0.000    11/15    1.7606
+baseline (git log -p --all)          0.889       1.000    13/15    1.8553
+RewardGate                           0.933       1.000    14/15    3.8271
+
+saved -> <HOME>/rewardgate/results/parity_ablation.json

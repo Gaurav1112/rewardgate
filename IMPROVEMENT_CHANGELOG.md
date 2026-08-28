@@ -176,6 +176,36 @@ mitigations are *k* independent trials and a larger corpus of independent base r
 
 ---
 
+## Iteration 4 — the ablation that refuted my own headline
+
+**What I tried and why.** Two independent reviewers made the same objection: RewardGate's only
+measured win is `CONTAMINATION_GIT`, where the baseline scores 0.000 — but the baseline is shown
+`git log --oneline`, and the contaminating commit sits off the current branch by construction. So
+the 0.000 could be an artefact of what I showed it. I added a `parity` mode giving the baseline
+`git log -p --all`, the same evidence my checker reads, and re-ran all 15 bundles.
+
+**Evidence.**
+
+| System | macro-F1 | CONTAMINATION_GIT F1 | exact-match | cost |
+|---|---:|---:|---:|---:|
+| baseline, `git log --oneline` | 0.600 | 0.000 | 11/15 | $1.7606 |
+| **baseline, `git log -p --all`** | **0.889** | **1.000** | **13/15** | $1.8553 |
+| RewardGate | 0.933 | 1.000 | 14/15 | $3.8271 |
+
+**The objection was right.** Given the same evidence the baseline detects contamination perfectly.
+The headline gap falls from 0.333 to **0.044** — one judgement in 45.
+
+**Decision.** Kept, and the headline rewritten around it. The measured advantage was an information
+asymmetry I designed. What survives is narrower: the pipeline runs the right command by default and
+attaches a commit SHA, for $0.00 and half the token cost.
+
+**Learning.** I had already written that "the difference is one `git` command" and thought that was
+the maximally honest framing. It was not — the honest version is that *the command is the whole
+contribution, and an LLM given its output needs nothing else from me.* The experiment that could
+refute a claim is worth more than any amount of careful hedging around it.
+
+---
+
 ## Withdrawn — a finding that was my own bug
 
 **What I claimed.** That the baseline was an indiscriminate flag-everything system: precision
