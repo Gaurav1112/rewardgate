@@ -23,7 +23,7 @@ No Docker image is built. The repository plus corpus is about 6 MB; a populated 
 adds roughly 115 MB (pyarrow dominates), so budget ~120 MB in total.
 
 ```bash
-git clone <repository-url> rewardgate
+git clone https://github.com/Gaurav1112/rewardgate.git rewardgate
 cd rewardgate
 uv sync                       # installs from uv.lock, ~10s
 ```
@@ -42,17 +42,6 @@ Downloads SWE-bench Verified (500 instances, Princeton NLP) and verifies it agai
 SHA-256. The SWE-bench *harness* is MIT-licensed; the dataset card carries no explicit licence
 tag and instances derive from their upstream projects' licences. The script refuses to continue on a checksum mismatch.
 
-### A1b. Audit a single task — this is the product
-
-```bash
-uv run rewardgate list
-uv run rewardgate audit csvlite-contaminated-git --no-exploit
-```
-
-Free and offline. Expect `VERDICT: REJECT`, a `CONTAMINATION_GIT` finding naming the hidden commit,
-an EXECUTED EVIDENCE block with real exit codes, and a human-checkpoint banner. Exit code 1.
-`--no-exploit` skips the paid agent tier; drop it to run the full pipeline on one bundle (~$0.26).
-
 ### A2. Build the synthetic corpus
 
 ```bash
@@ -64,15 +53,32 @@ control + 3 defect variants).
 Ground truth is written to `corpus/synthetic/bundles/labels.yaml` **by the injector that produced
 each defect**, so the labels cannot drift from the artifacts.
 
+### A2b. Audit a single task — this is the product
+
+```bash
+uv run rewardgate list
+uv run rewardgate audit csvlite-contaminated-git --no-exploit
+```
+
+Free and offline. Expect `VERDICT: REJECT`, a `CONTAMINATION_GIT` finding naming the hidden commit,
+an EXECUTED EVIDENCE block with real exit codes, and a human-checkpoint banner. Exit code 1.
+`--no-exploit` skips the paid agent tier; drop it to run the full pipeline on one bundle (~$0.26).
+
 ### A3. Run the test suite
 
 ```bash
 uv run pytest -q
 ```
 
-Expected: all tests pass in a few seconds. This includes the corpus-level regression tests that
-pin every headline number, so a green suite *is* verification of the static claims — including
-that the solution-leakage detector still measures 133/500 on SWE-bench Verified.
+Expected: `229 passed`, in roughly 10–16 seconds.
+
+What a green suite does and does not verify. It pins **every third-party-corpus number** — the
+133/500 leakage figure, the 42.0% at-least-one-defect rate, and the specific instance *ids*, not
+merely their count — so those claims are checked, not asserted. It does **not** pin the synthetic
+corpus's headline figures (macro-F1 0.600 / 0.889 / 0.933, the costs, the wall clock); those are
+reproduced by replaying the committed audits in **A5** and **A6** instead. An earlier version of
+this file claimed the suite pinned "every headline number". It did not, and the difference matters
+in a project whose thesis is that unverified numbers are the problem.
 
 ### A4. Reproduce the third-party findings
 
@@ -113,6 +119,39 @@ uv run python -m rewardgate.significance
 
 Expected: `McNemar exact p = 0.2500 — NOT significant at alpha=0.05`, with 3 discordant pairs.
 
+### A6. Reproduce the ablation that refutes the headline
+
+```bash
+uv run python scripts/run_parity_ablation.py --replay
+```
+
+Re-scores the committed parity audits. **$0.00, under a second.** This is the most consequential
+result in the report, so it has a free path: a judge should not have to take the retraction on
+trust any more than the original claim.
+
+Expected, exactly:
+
+```
+SYSTEM                            macro-F1   CONTAM F1   exact      cost
+========================================================================
+baseline (git log --oneline)         0.600       0.000    11/15    1.7606
+baseline (git log -p --all)          0.889       1.000    13/15    1.8553
+RewardGate                           0.933       1.000    14/15    3.8271
+
+parity baseline vs RewardGate: 0 judgements only the baseline got right, 1 only RewardGate, McNemar exact p = 1.0000
+discordant: semverlite-nop-pass/REWARD_HACKABLE
+```
+
+To regenerate rather than replay, drop `--replay`: 15 fresh model calls, **~$1.86, ~12 minutes**,
+and it needs an API key (Path B).
+
+---
+
+## Path B — re-run the agent trials
+
+Requires the Claude Code CLI, authenticated (`claude login`) **or** `ANTHROPIC_API_KEY` exported.
+No credits are provided by this project.
+
 ### B0. Deterministic tiers only, live — NOTE: this costs money
 
 ```bash
@@ -123,12 +162,6 @@ Runs the reward gate and contamination scan live but skips the agent. **This sti
 baseline, so it is not free** — it is listed here under Path B rather than Path A for that reason.
 Use `--replay` for a strictly free run.
 
----
-
-## Path B — re-run the agent trials
-
-Requires the Claude Code CLI, authenticated (`claude login`) **or** `ANTHROPIC_API_KEY` exported.
-No credits are provided by this project.
 
 ```bash
 uv run python -m rewardgate.evaluate

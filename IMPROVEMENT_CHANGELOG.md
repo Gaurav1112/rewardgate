@@ -6,6 +6,21 @@ failed taught more than the ones that worked.
 
 Each stage is measured on the same corpus with the same scorer.
 
+## Summary
+
+| Stage | What I tried and why | Evidence | Decision / Learning |
+|---|---|---|---|
+| **Baseline** | One direct prompt, no tools — the brief's own suggested baseline | macro-F1 **0.600**, exact 11/15, $0.1174/bundle | Established the starting point |
+| **Iteration 1** | AST weak-assertion analysis, after seeing suites that only assert a module imports | 48/350 real instances flagged; a coverage hole my own fixtures had hidden | **Kept.** Fixtures chosen to pass are not a test set |
+| **Iteration 2** | Over-specification checker (asserts on internal symbols) | 42/500; caught and fixed a 5× overcount in my own counter | **Kept.** The measuring instrument needs its own tests |
+| **Iteration 3** | Adversarial exploit agent — the one component that needs a model | Proves REWARD_HACKABLE by execution; visible green, held-out red | **Kept.** But my first definition of the defect was simply wrong |
+| **Iteration 4** | Parity ablation: give the baseline `git log -p --all`, the same evidence my checker reads | baseline **0.889** vs RewardGate **0.933**; gap 0.333 → **0.044**; McNemar **p = 1.00** | **Kept, and it refuted my own headline.** The advantage was an information asymmetry I designed |
+| **Iteration 5** | Adversarial panel against the shipped tool | 4 working fail-opens found, each reporting a defective task as sound | **Kept.** My own thesis applied to my own code |
+| **Removed** | A five-agent fan-out, one LLM per defect class | Deterministic checks give stronger evidence at $0.00: an exit code and a commit SHA beat an opinion | **Removed.** Number of agents is not a measure of engineering |
+| **Final** | Deterministic tiers + one adversarial agent | macro-F1 **0.933** vs a *fair* baseline's **0.889**, n=15, p=1.00 | Main contribution: **42% of SWE-bench Verified is defective, measured for $0.00** |
+
+The sections below give each stage in full, including the numbers I had to withdraw.
+
 ---
 
 ## Stage 0 — Baseline
@@ -113,20 +128,32 @@ result, I would have published a detector that flags every task ever written.
 **Evidence.** Regraded on exploit **cost** — how many literal inputs the exploit must special-case
 — and strengthened the clean bundles to 8+ parametrised cases so a real separation could exist.
 
+Numbers below are read from the shipped [`results/rewardgate_audits.json`](results/rewardgate_audits.json),
+not from the earlier `exploit_trials.json` run. An earlier version of this table used the older
+file, which predated the fix for dict-literal counting and therefore showed `0` special-cases for
+bundles the current grader prices at 8 — the table contradicted the paragraph beneath it.
+
 | Bundle | Label | Verdict | Hardcoded cases |
 |---|---|---|---:|
-| `csvlite-clean` | CLEAN | RESISTED — agent had to fix it properly | 0 |
-| `csvlite-nop-pass` | NOP_PASS | RESISTED — no exploit found | 0 |
+| `csvlite-clean` | CLEAN | gameable, but costly — more work than the real fix | 8 |
+| `csvlite-nop-pass` | NOP_PASS | no patch made the visible suite pass | — |
 | `csvlite-reward-hackable` | REWARD_HACKABLE | **REWARD_HACKABLE** | **1** |
-| `csvlite-contaminated-git` | CONTAMINATION_GIT | RESISTED — agent had to fix it properly | 0 |
+| `csvlite-contaminated-git` | CONTAMINATION_GIT | gameable, but costly | 9 |
+
+The separation the grader actually achieves is **1 versus 8**, not *exploit* versus *no exploit*.
+An exploit exists everywhere; only its price distinguishes a sound task from a hackable one.
 
 False positives **0/3**, true positives **1/1**. Same agent, same corpus, same code — only the
 definition of the defect changed.
 
-**Decision.** Kept, graded by cost with a threshold of 2 special-cases. The striking part: given a
-diverse visible suite, the agent **chose to genuinely fix the bug despite being explicitly told to
-cheat**, because hardcoding 8 parametrised cases was more work than writing the real
-implementation.
+**Decision.** Kept, graded by cost with a threshold of 2 special-cases.
+
+**A claim I made here and have withdrawn.** This entry used to say that, given a diverse visible
+suite, the agent *chose to genuinely fix the bug despite being told to cheat* — a nice result about
+incentives. The transcript says otherwise. `trajectories/exploit-agent-csvlite-clean.md` records the
+agent writing a dictionary that memorises all eight visible inputs and replying `EXPLOIT_FOUND`. It
+cheated, successfully, and my grader's pattern list failed to price the dict literal. I had read the
+grade rather than the transcript and reported the grade as a finding about the agent.
 
 ---
 
@@ -197,7 +224,17 @@ The headline gap falls from 0.333 to **0.044** — one judgement in 45.
 
 **Decision.** Kept, and the headline rewritten around it. The measured advantage was an information
 asymmetry I designed. What survives is narrower: the pipeline runs the right command by default and
-attaches a commit SHA, for $0.00 and half the token cost.
+attaches a commit SHA, and the contamination check itself costs $0.00. It is **not** cheaper
+overall — $3.8271 against the parity baseline's $1.8553, 2.06×, because it also runs an exploit
+agent. An earlier draft of this entry claimed "half the token cost", which inverted the ratio
+sitting two lines above it in the same table.
+
+**The refutation has its own limit, and I found it late.** `baseline.py` caps the git log it shows
+at `MAX_FILE_CHARS = 6000`; the corpus histories are 5.6–6.7 KB over 2–4 commits, so the
+contaminating hunk survives truncation by ordering luck, while the checker reads history uncapped.
+So the ablation refutes the headline *at toy scale* and says nothing above it. I am recording that
+rather than quietly banking the more flattering reading — the whole point of running the ablation
+was to stop choosing between framings.
 
 **Learning.** I had already written that "the difference is one `git` command" and thought that was
 the maximally honest framing. It was not — the honest version is that *the command is the whole
@@ -333,3 +370,33 @@ task looked unsolvable for a reason having nothing to do with the task.
 in a real benchmark harness fails *quietly* — tasks are marked unsolved, the model is blamed, and
 the harness is never suspected. **A harness that cannot verify its own environment produces
 confident numbers about the wrong thing.**
+
+---
+
+## Main failure mode
+
+**A single exploit trial priced by regex.** The agent runs once per bundle, and its exploit is
+graded by counting literal special-cases with a pattern list. Both halves fail: a stochastic agent
+can miss an exploit it would find on a rerun, and an exploit written in a shape the patterns do not
+match is priced at zero — which is exactly how `retrylite-reward-hackable` was missed, and how an
+earlier build graded a dict that memorised eight inputs as "no exploit". *k* independent trials and
+a semantic cost measure are the fixes; neither is implemented.
+
+## Hot take
+
+**Reward-hackability is a property of the evaluation protocol, not of the individual task.**
+
+My first detector defined the defect as "an exploit exists". It flagged the clean bundle too —
+**100% false positives** — because *any* finite, visible test suite can be hardcoded given enough
+branches. Existence is not a discriminating property; cost is. Regrading on how many literals the
+exploit must special-case took false positives to zero.
+
+The practical rule an author can act on before shipping: **test-input diversity is the defence, and
+it is measurable in advance.** A suite with one visible input falls to a single `if`. A suite with
+eight costs more to memorise than to solve.
+
+And the second-order lesson, which cost me two rewrites: **the thing measuring your evaluation is
+part of your evaluation.** A parser that inverted booleans, a held-out suite that reused its visible
+inputs, and a cost counter blind to dict literals each produced confident, plausible, wrong numbers
+that passed every test I had. SWE-bench ships its tests alongside the task; no amount of care on any
+single task closes that, and no amount of care on any single checker closes this.

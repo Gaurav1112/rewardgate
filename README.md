@@ -175,6 +175,10 @@ Full run: **$5.5877**, 1711.3s (28.5 min) wall clock.
 Absolute deltas are given above rather than percentages, because percentage change off a 0.000
 denominator manufactures magnitude. And the per-class table is the real result:
 
+> **Superseded below.** Everything in this subsection is measured against the *unfair* baseline
+> (`git log --oneline`). The parity ablation re-derives it and reverses part of it. Kept because
+> the changelog should show what I believed at each step, not only the final state.
+
 **The agent ties the baseline on its own defect class.** `REWARD_HACKABLE` is 0.800 for both. The
 adversarial exploit agent — the expensive, novel component, at 117% higher cost — did not beat a
 careful reader at the one thing it exists to do.
@@ -222,14 +226,34 @@ tested it — `uv run python scripts/run_parity_ablation.py`, results in
 **Given the same evidence, the baseline detects contamination perfectly — 1.000, identical to
 RewardGate.** The headline gap collapses from **0.333 to 0.044**, which is one judgement out of 45.
 
+That one judgement is worth naming, because it inverts the story told above. Pairing the two
+systems gives 0 judgements where only the baseline is right, 1 where only RewardGate is, and
+**McNemar exact p = 1.00** — the largest value the test can return. The single discordant pair is
+`semverlite-nop-pass / REWARD_HACKABLE`, where the parity baseline raises a **false positive** and
+RewardGate does not. So under a fair comparison the residual difference is not contamination at
+all, and it is not a mechanism: it is one hallucination the executing system did not make.
+
+That also retires the "ties on its own class" reading in the section above, which was measured
+against the unfair baseline and never re-derived after the ablation.
+
 So the honest conclusion is stronger than the one I started with and worse for my own system: the
 measured advantage was **an information asymmetry I designed**, not a capability difference. An LLM
 shown the right `git` output finds the fix on the side branch without any help from me.
 
 What survives is smaller and duller: the pipeline *runs the right command by default*, deterministically,
-for $0.00, and attaches the commit SHA. The baseline only matched it because I hand-fed it 10 KB of
-`git log -p --all` in the prompt — at higher token cost, with no artifact, and only because I already
-knew which command to run.
+for $0.00, and attaches the commit SHA. The baseline only matched it because I hand-fed it ~6 KB of
+`git log -p --all` in the prompt — with no artifact, and only because I already knew which command
+to run. (The pipeline is not cheaper: $3.83 against the parity baseline's $1.86, because it also
+runs an exploit agent. It is the *contamination check* that is free.)
+
+**And the retreat itself has a limit, which cuts the other way.** `baseline.py` truncates that log
+to `MAX_FILE_CHARS = 6000`. The corpus histories are 2–4 commits and 5.6–6.7 KB, so the fix lands
+inside the window by luck of ordering; the contamination checker reads the history uncapped. The
+parity result is therefore a property of a two-commit synthetic corpus, not of the method. On a
+repository with ten thousand commits the baseline would see a fraction of a percent of the history
+and the checker would still see all of it. I have not tested that, so I am not claiming it — but
+the honest statement is that the ablation refutes my headline *at this scale* and is silent above
+it, not that the gap is truly 0.044 everywhere.
 
 ### So what does this project actually establish?
 
@@ -371,7 +395,7 @@ Full instructions, including a **free path that needs no API key**, are in
 uv sync
 ./scripts/fetch_real_corpus.sh          # 2.0 MB, checksum-pinned
 uv run python corpus/synthetic/build.py # 15 bundles, labels by construction
-uv run pytest -q                        # includes regression tests pinning every headline number
+uv run pytest -q                        # 229 tests; pins every third-party-corpus number
 uv run python -m rewardgate.report_real # third-party findings, $0.00
 uv run python -m rewardgate.evaluate --replay   # re-score saved audits offline, $0.00
 ```
