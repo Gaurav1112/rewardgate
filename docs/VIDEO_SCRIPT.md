@@ -42,7 +42,7 @@ Read it flat. Short sentences. Do not perform the reversals as apologies. They a
 >
 > One of those four checkers has an outside anchor. Mine counts a hundred and thirty-three
 > instances that leak the gold file path into the issue text. The SWE-bench Illusion paper reports
-> a hundred and thirty-five. Two apart, on a corpus I did not build.
+> a hundred and thirty-five. Close, on a corpus I did not build. The two heuristics are not identical, so it is corroboration rather than a replication.
 
 ---
 

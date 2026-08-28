@@ -46,7 +46,7 @@ META: dict[int, tuple[str, list[tuple[str, str]]]] = {
     0: ("Benchmark tasks train coding agents. A lot of them are broken.", []),
     1: ("42% of a real, widely-used benchmark carries at least one defect.",
         [("AT LEAST ONE DEFECT", "the headline: 210 of 500, for $0.00"),
-         ("solution leakage", "published figure is 135 — mine is 133, on a corpus I did not build")]),
+         ("solution leakage", "cf. published 135 — a different heuristic, so corroboration not replication")]),
     2: ("The baseline is a competent reader, not a straw man.", []),
     3: ("Both bounds the field checks today are satisfied. The task still looks valid.",
         [("oracle trial", "gold patch applied -> suite passes"),
@@ -150,7 +150,7 @@ def slide(path: Path, title: str, lines: list[str], takeaway: str, caption: str,
     top = 118 + 40 * len(wrap(takeaway, 92)[:2]) + 22
     # Fit the panel to its content. A fixed-height box left a third of the frame empty on the
     # short slides, which reads as an unfinished template rather than a considered layout.
-    rendered = sum(len(wrap(raw, 96)) for raw in lines)
+    rendered = sum(len(wrap(raw, 88)) for raw in lines)
     bottom = min(B.H - 240, top + 52 + rendered * (F_TERM.size + 11))
     d.rounded_rectangle([80, top, B.W - 80, bottom], radius=10, fill=PANEL, outline=BORDER, width=2)
 
@@ -158,7 +158,7 @@ def slide(path: Path, title: str, lines: list[str], takeaway: str, caption: str,
     note_targets = dict(callouts)
     for raw in lines:
         fill = colour_for(raw)
-        for ln in wrap(raw, 96):
+        for ln in wrap(raw, 88):
             if y > bottom - 40:
                 break
             d.text((112, y), ln, font=F_TERM, fill=fill)

@@ -1,6 +1,6 @@
 SWE-bench Verified — 500 instances, deterministic checks, $0.00
 ==============================================================================
-solution leakage (gold file named)     133/500  ( 26.6%)  published figure: 135 — delta 2
+solution leakage (gold file named)     133/500  ( 26.6%)  cf. published 135 (different heuristic: theirs also counts imports, mine counts basenames)
   of which full path (high conf.)      107/500  ( 21.4%)  
 over-specified (internal symbol)        42/500  (  8.4%)  
   high severity (symbol + file)         16/500  (  3.2%)  
