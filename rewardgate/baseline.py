@@ -40,8 +40,14 @@ def _read(path: Path) -> str:
     return text[:MAX_FILE_CHARS] + ("\n... [truncated]" if len(text) > MAX_FILE_CHARS else "")
 
 
-def render_bundle(bundle_dir: Path) -> str:
-    """Render a bundle as the text a reviewer would read."""
+def render_bundle(bundle_dir: Path, parity: bool = False) -> str:
+    """Render a bundle as the text a reviewer would read.
+
+    `parity=True` hands the baseline `git log -p --all` instead of `git log --oneline`, i.e. the
+    same evidence the pipeline's contamination checker reads. This exists to test whether the
+    measured advantage is a real capability difference or an artefact of what the baseline was
+    shown. Running the experiment that could refute the headline is the point.
+    """
     sections: list[str] = []
 
     instruction = bundle_dir / "instruction.md"
@@ -57,28 +63,32 @@ def render_bundle(bundle_dir: Path) -> str:
         sections.append(f"===== solution.patch (the gold fix) =====\n{_read(patch)}")
 
     if (bundle_dir / ".git").exists():
+        # `--all` walks every ref; `--oneline` shows only the current branch. Which one the
+        # baseline sees decides whether it can possibly detect a fix parked on a side branch, so
+        # it is a parameter rather than a constant — see `parity` below.
+        args = ["git", "log", "-p", "--all"] if parity else ["git", "log", "--oneline", "-20"]
         log = subprocess.run(
-            ["git", "log", "--oneline", "-20"],
-            cwd=bundle_dir, capture_output=True, text=True, check=False,
+            args, cwd=bundle_dir, capture_output=True, text=True, check=False,
         ).stdout
-        sections.append(f"===== git log --oneline =====\n{log or '<empty>'}")
+        label = "git log -p --all" if parity else "git log --oneline"
+        sections.append(f"===== {label} =====\n{log[:MAX_FILE_CHARS] or '<empty>'}")
     else:
-        sections.append("===== git log --oneline =====\n<no git history shipped>")
+        sections.append("===== git log =====\n<no git history shipped>")
 
     return "\n\n".join(sections)
 
 
-def build_prompt(bundle_dir: Path) -> str:
-    return f"{PREAMBLE}\n{render_bundle(bundle_dir)}\n\n{schema_instructions()}"
+def build_prompt(bundle_dir: Path, parity: bool = False) -> str:
+    return f"{PREAMBLE}\n{render_bundle(bundle_dir, parity)}\n\n{schema_instructions()}"
 
 
-def audit_bundle(bundle_dir: Path, model: str = DEFAULT_MODEL) -> Audit:
+def audit_bundle(bundle_dir: Path, model: str = DEFAULT_MODEL, parity: bool = False) -> Audit:
     """Produce a baseline audit: a single model call with no tools and no execution."""
     bundle_id = bundle_dir.name
     try:
         completed = subprocess.run(
             [
-                "claude", "-p", build_prompt(bundle_dir),
+                "claude", "-p", build_prompt(bundle_dir, parity),
                 "--output-format", "json",
                 "--model", model,
                 "--max-turns", "1",

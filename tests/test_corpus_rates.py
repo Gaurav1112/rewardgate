@@ -80,3 +80,41 @@ def test_headline_defect_rate_is_stable(bundles):
         ):
             flagged += 1
     assert flagged == 210, f"headline defect count changed: {flagged}/500 (expected 210)"
+
+
+def test_leakage_flags_the_same_instance_SET_not_merely_the_same_count(bundles):
+    """Pins WHICH instances leak, not how many.
+
+    A mutation audit built a detector that ignores the patch entirely and fires on
+    `md5(problem_statement) % 10000 < 2593` — tuned to output exactly 133 instances, overlapping
+    the real detector on 37. It passed both count-based tests. The 133-vs-135 cross-validation is
+    this project's strongest de-circularisation argument, and a count alone lets noise satisfy it.
+    """
+    import json
+    from pathlib import Path
+
+    expected = set(json.loads(
+        (Path(__file__).parent / "fixtures_flagged_instances.json").read_text()
+    )["leakage"])
+    measured = {
+        b.instance_id for b in bundles
+        if detect_solution_leakage(b.problem_statement, b.patch).leaked
+    }
+    assert measured == expected, (
+        f"leakage instance SET changed: {len(measured ^ expected)} instances differ "
+        f"(count alone is unchanged at {len(measured)})"
+    )
+
+
+def test_over_specification_flags_the_same_instance_set(bundles):
+    import json
+    from pathlib import Path
+
+    expected = set(json.loads(
+        (Path(__file__).parent / "fixtures_flagged_instances.json").read_text()
+    )["overspec"])
+    measured = {
+        b.instance_id for b in bundles
+        if detect_over_specification(b.problem_statement, b.patch).over_specified
+    }
+    assert measured == expected

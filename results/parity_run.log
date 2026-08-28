@@ -1,0 +1,6 @@
+  [parity 1/15] csvlite-clean
+  [parity 2/15] csvlite-clean-git-history
+  [parity 3/15] csvlite-contaminated-git
+  [parity 4/15] csvlite-nop-pass
+  [parity 5/15] csvlite-reward-hackable
+  [parity 6/15] retrylite-clean
