@@ -104,7 +104,7 @@ def test_cli_report_cites_verifiable_commands(capsys):
     main(["audit", "csvlite-clean", "--no-exploit"])
     output = capsys.readouterr().out
     assert "VERIFY THIS YOURSELF" in output
-    assert "git apply solution.patch" in output
+    assert "patch -p1 < solution.patch" in output
 
 
 def test_cli_unknown_bundle_exits_with_an_error(capsys):

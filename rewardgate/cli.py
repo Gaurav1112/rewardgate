@@ -73,6 +73,62 @@ def _rule(char: str = "-", width: int = 78) -> str:
     return char * width
 
 
+def verification_commands(bundle_dir: Path, trace: AuditTrace) -> list[str]:
+    """The commands a reader pastes to check the report's claims against their own machine.
+
+    Generated from the audit rather than templated, because a hardcoded block was wrong in three
+    independent ways at once and every one of them was invisible from the code:
+
+    * `python -m pytest` assumed an ambient interpreter with pytest installed. On a machine with
+      only `python3`, and with pytest inside the project venv, the first command a reviewer pastes
+      dies at `command not found`.
+    * `git stash` was used to undo the gold patch. Bundles are gitignored, so stash does not touch
+      them — and a clean bundle ships no `.git` at all, so the command runs against the *enclosing*
+      repository and silently stashes the reviewer's own uncommitted work. Actively destructive,
+      and it did not even revert the thing it was there to revert.
+    * The contamination grep took its search string from `grep '^+' solution.patch | head -1`,
+      which is the diff's `+++ b/...` file header, not a line of the fix. That header appears in
+      any history containing the file, so the command reported contamination on
+      `csvlite-clean-git-history` — the corpus's own negative control.
+    """
+    from rewardgate.checkers.contamination import _significant_solution_lines
+    from rewardgate.gates import read_patch
+
+    # `patch`, not `git apply`. A bundle that ships no `.git` of its own resolves to the enclosing
+    # repository, and `git apply` then interprets the diff's paths relative to *that* repo's root
+    # rather than the bundle. It exits 0 having patched nothing: the oracle command silently
+    # reports the unfixed suite's failures. `patch -p1` is cwd-relative and has no repo semantics.
+    commands = [
+        f"cd {bundle_dir}",
+        "uv run pytest tests/ -q                             # no-op:  expect failures",
+        "patch -p1 < solution.patch && uv run pytest tests/ -q  # oracle: expect all pass",
+        "patch -R -p1 < solution.patch                       # restore the tree",
+    ]
+
+    contamination = trace.contamination
+    if not getattr(contamination, "has_git", False):
+        commands.append("# no git history shipped, so there is nothing to search for the fix in")
+        return commands
+
+    # Search for a line the fix actually adds. Prefer one the checker proved is disclosed, so the
+    # reader reproduces the finding rather than a paraphrase of it.
+    disclosed = sorted(getattr(contamination, "disclosed_lines", ()) or ())
+    candidates = disclosed or sorted(_significant_solution_lines(read_patch(bundle_dir)))
+    if not candidates:
+        commands.append("# no gold-patch line is distinctive enough to search history for")
+        return commands
+
+    # Scoped to `src/` because the bundle commits `solution.patch` itself. In `git log -p` the
+    # patch file's own `+` lines appear as `++`, so an unscoped grep matches the gold fix inside
+    # the shipped patch and reports contamination on `csvlite-clean-git-history` — the corpus's
+    # negative control. The checker is not fooled (it strips one `+` and compares whole lines);
+    # an unscoped grep is a looser test than the finding it claims to reproduce.
+    expectation = "expect a match" if disclosed else "expect no match"
+    needle = candidates[0].replace("'", "'\\''")
+    commands.append(f"git log -p --all -- src/ | grep -F '{needle}'   # {expectation}")
+    return commands
+
+
 def render_report(audit: Audit, trace: AuditTrace, bundle_dir: Path) -> str:
     """Render a reviewer-grade audit memo."""
     label, gloss = VERDICT_STYLE.get(audit.verdict, (audit.verdict, ""))
@@ -132,18 +188,9 @@ def render_report(audit: Audit, trace: AuditTrace, bundle_dir: Path) -> str:
         lines += ["", _rule(), "EXPLOIT PATCH (this is what made the visible suite pass)", _rule(), ""]
         lines += [f"  {line}" for line in exploit.exploit_patch.splitlines()[:40]]
 
-    lines += [
-        "",
-        _rule(),
-        "VERIFY THIS YOURSELF",
-        _rule(),
-        "",
-        f"  cd {bundle_dir}",
-        "  git apply solution.patch && python -m pytest tests/ -q   # oracle: expect pass",
-        "  git stash && python -m pytest tests/ -q                  # no-op:  expect fail",
-        "  git log -p --all | grep -F \"$(grep '^+' solution.patch | head -1 | cut -c2-)\"",
-        "",
-    ]
+    lines += ["", _rule(), "VERIFY THIS YOURSELF", _rule(), ""]
+    lines += [f"  {line}" for line in verification_commands(bundle_dir, trace)]
+    lines.append("")
 
     if audit.verdict == REJECT:
         lines += [
