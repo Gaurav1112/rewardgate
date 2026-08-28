@@ -9,11 +9,45 @@ transcript while keeping the JSONL alongside it for anyone who wants the unfilte
 from __future__ import annotations
 
 import json
+import os
+import re
 from pathlib import Path
 from typing import Any
 
 MAX_RESULT_CHARS = 900
 MAX_TEXT_CHARS = 1200
+
+# Event streams embed the agent runtime's full system prompt, which carries the operator's home
+# directory, temp paths and installed tool inventory. None of that is evidence about the audit, and
+# publishing it would leak the author's environment into a public repository.
+_REDACTIONS: tuple[tuple[re.Pattern[str], str], ...] = (
+    (re.compile(re.escape(str(Path.home()))), "<HOME>"),
+    (re.compile(r"/(?:private/)?(?:var|tmp)/[^\s\"']*"), "<TMP>"),
+    (re.compile(r"/Users/[^/\s\"']+"), "<HOME>"),
+    (re.compile(r"/home/[^/\s\"']+"), "<HOME>"),
+)
+
+
+def redact(text: str) -> str:
+    """Remove environment-identifying paths from text destined for the repository."""
+    for pattern, replacement in _REDACTIONS:
+        text = pattern.sub(replacement, text)
+    return text
+
+
+def _redact_event(event: dict) -> dict:
+    """Redact an event by round-tripping it through its JSON form."""
+    return json.loads(redact(json.dumps(event)))
+
+
+def _is_runtime_boilerplate(event: dict) -> bool:
+    """True for the runtime's own session-init event.
+
+    It carries the agent runtime's full configuration — every installed plugin, MCP server and
+    slash command on the operator's machine. That is the author's environment, not evidence about
+    the audit, and it has no place in a published transcript.
+    """
+    return event.get("type") == "system" and event.get("subtype") == "init"
 
 
 def _truncate(text: str, limit: int) -> str:
@@ -89,8 +123,9 @@ def save(
     brief: str,
     extra: dict[str, Any] | None = None,
 ) -> tuple[Path, Path]:
-    """Write both the readable transcript and the raw JSONL. Returns both paths."""
+    """Write both the readable transcript and the raw JSONL, redacted. Returns both paths."""
     out_dir.mkdir(parents=True, exist_ok=True)
+    events = [_redact_event(e) for e in events if not _is_runtime_boilerplate(e)]
 
     markdown = render(events, title=title, brief=brief)
     if extra:

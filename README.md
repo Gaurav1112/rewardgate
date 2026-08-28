@@ -110,7 +110,7 @@ On the third-party corpus — 500 real instances, deterministic checks, **$0.00*
 | Solution leakage (issue names the gold file) | **133/500 (26.6%)** |
 | Over-specification (issue names an *internal* symbol) | 42/500 (8.4%) |
 | Hint channel discloses gold-patch lines | 54/500 (10.8%) |
-| Weak fail-to-pass assertions | 49/350 (14.0%) of parsed |
+| Weak fail-to-pass assertions | 48/350 (13.7%) of parsed |
 | **At least one defect** | **210/500 (42.0%)** |
 
 **Stated limitation:** 150/500 instances are *indeterminate* for assertion analysis — the diff adds

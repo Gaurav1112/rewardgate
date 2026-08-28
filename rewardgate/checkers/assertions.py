@@ -128,8 +128,19 @@ class _TestBodyVisitor(ast.NodeVisitor):
         self.generic_visit(node)
 
     def visit_ExceptHandler(self, node: ast.ExceptHandler) -> None:
-        # `except: pass` / `except Exception: pass` hides the signal the test exists to detect.
-        if all(isinstance(stmt, (ast.Pass, ast.Expr)) for stmt in node.body):
+        """Flag handlers that discard the failure the test exists to surface.
+
+        Only inert bodies count: `pass`, `...`, or a bare docstring. An earlier version treated
+        any `ast.Expr` as inert, which matched ordinary calls — so
+        `except ValueError: self.fail("should not raise")` and `except X: print(...)` were graded
+        as swallowing exceptions despite doing the opposite.
+        """
+        def inert(stmt: ast.stmt) -> bool:
+            if isinstance(stmt, ast.Pass):
+                return True
+            return isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Constant)
+
+        if node.body and all(inert(stmt) for stmt in node.body):
             self.swallows = True
         self.generic_visit(node)
 

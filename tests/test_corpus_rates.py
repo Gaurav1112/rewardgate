@@ -47,7 +47,7 @@ def test_unparseable_instances_never_claim_a_verdict(bundles):
 def test_weak_assertion_rate_is_stable(bundles):
     reports = [analyze_test_assertions(b.test_patch) for b in bundles]
     weak = sum(1 for r in reports if r.has_weak_assertions)
-    assert weak == 49, f"weak-assertion count changed: {weak} (expected 49)"
+    assert weak == 48, f"weak-assertion count changed: {weak} (expected 48)"
 
 
 def test_leakage_rate_matches_published_measurement(bundles):

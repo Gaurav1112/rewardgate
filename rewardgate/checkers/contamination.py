@@ -47,6 +47,12 @@ class ContaminationFinding:
     commits: tuple[str, ...] = field(default_factory=tuple)
     has_git: bool = False
     on_current_branch: bool = False
+    error: str = ""
+
+    @property
+    def indeterminate(self) -> bool:
+        """History could not be read, so no verdict is claimed either way."""
+        return bool(self.error)
 
     @property
     def contaminated(self) -> bool:
@@ -65,6 +71,8 @@ class ContaminationFinding:
 
     @property
     def reason(self) -> str:
+        if self.error:
+            return f"INDETERMINATE — could not read git history: {self.error}"
         if not self.has_git:
             return "no git history shipped with the bundle"
         if not self.contaminated:
@@ -78,10 +86,24 @@ class ContaminationFinding:
         )
 
 
+class GitCommandError(RuntimeError):
+    """A git invocation failed, so history could not be read.
+
+    Raised rather than returning empty output. An earlier version discarded the return code, which
+    made a broken repository indistinguishable from a clean one — the checker reported "contains no
+    gold-patch lines" whenever git itself failed. That is precisely the silent failure this
+    module's own docstring warns about.
+    """
+
+
 def _git(args: list[str], cwd: Path) -> str:
     result = subprocess.run(
         ["git", *args], cwd=cwd, capture_output=True, text=True, check=False, timeout=60
     )
+    if result.returncode != 0:
+        raise GitCommandError(
+            f"git {' '.join(args)} failed ({result.returncode}): {result.stderr.strip()[:200]}"
+        )
     return result.stdout
 
 
@@ -101,17 +123,20 @@ def detect_git_contamination(bundle_dir: Path, solution_patch: str) -> Contamina
             if line.startswith("+") and not line.startswith("+++")
         }
 
-    # --all walks every ref, which is what surfaces a fix parked on a side branch.
-    disclosed = solution_lines & added_lines_in(["log", "-p", "--all"])
-    # The current branch alone is what a reviewer sees by default.
-    on_current = bool(solution_lines & added_lines_in(["log", "-p"]))
+    try:
+        # --all walks every ref, which is what surfaces a fix parked on a side branch.
+        disclosed = solution_lines & added_lines_in(["log", "-p", "--all"])
+        # The current branch alone is what a reviewer sees by default.
+        on_current = bool(solution_lines & added_lines_in(["log", "-p"]))
 
-    commits: list[str] = []
-    if disclosed:
-        current_lines = set(_git(["log", "--oneline"], bundle_dir).splitlines())
-        for line in _git(["log", "--oneline", "--all"], bundle_dir).splitlines():
-            marker = "[shortlog]" if line in current_lines else "[hidden]"
-            commits.append(f"{marker} {line}")
+        commits: list[str] = []
+        if disclosed:
+            current_lines = set(_git(["log", "--oneline"], bundle_dir).splitlines())
+            for line in _git(["log", "--oneline", "--all"], bundle_dir).splitlines():
+                marker = "[shortlog]" if line in current_lines else "[hidden]"
+                commits.append(f"{marker} {line}")
+    except GitCommandError as exc:
+        return ContaminationFinding(has_git=True, error=str(exc))
 
     return ContaminationFinding(
         disclosed_lines=frozenset(disclosed),

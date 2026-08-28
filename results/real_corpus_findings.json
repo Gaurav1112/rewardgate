@@ -4,7 +4,7 @@
   "published_leakage_reference": 135,
   "over_specified_internal": 42,
   "hint_contamination": 54,
-  "weak_assertions": 49,
+  "weak_assertions": 48,
   "assertion_parse_coverage": 350,
   "at_least_one_defect": 210
 }
