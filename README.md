@@ -86,7 +86,7 @@ Both see the same bundles, emit the same schema, and are scored by the same func
 | **Capability** | It can *settle* `REWARD_HACKABLE`. The baseline can only form an opinion about it; the pipeline writes an exploit patch, runs it, and shows the visible suite green while the held-out suite is red. Under the fair (parity) comparison this is also the only class where the two differ: F1 **0.800** vs **0.667**. |
 | **Reliability** | Every positive verdict carries a mechanical artifact — an exit code, a commit SHA, an exploit patch. Nothing rests on a model's assertion, which matters given a measured **18.5% evaluator–human misalignment rate** in LLM-as-judge ([arXiv:2607.02577](https://arxiv.org/abs/2607.02577)). |
 | **Coverage** | Two of three classes are settled **deterministically at $0.00**, so they can run in CI on every task, not just on a sample. |
-| **Engineering quality** | A check that cannot run returns `INDETERMINATE`, never `ACCEPT` — including on `--no-exploit`, where only two of three classes are examined. 234 tests, exit codes that distinguish "broken" from "uncheckable", and a documented bundle contract. |
+| **Engineering quality** | A check that cannot run returns `INDETERMINATE`, never `ACCEPT` — including on `--no-exploit`, where only two of three classes are examined. 241 tests, exit codes that distinguish "broken" from "uncheckable", and a documented bundle contract. |
 
 **And the honest limit, stated here rather than buried.** On the primary metric the advantage is
 small: macro-F1 **0.933** against a fair baseline's **0.889** on 15 bundles, one discordant
@@ -186,10 +186,10 @@ into two tiers, and the more important one is not mine:
 | **Third-party** | [SWE-bench Verified](https://huggingface.co/datasets/princeton-nlp/SWE-bench_Verified), 500 real instances | Princeton NLP — **not me** | The text checkers find real defects in a real, widely-used benchmark |
 | Synthetic | 15 bundles, 3 self-authored micro-repos | Me | Baseline-vs-agent comparison on defects requiring execution |
 
-**The cross-validation that matters:** my solution-leakage detector independently measures
-**133/500** instances leaking the gold file path in the issue text. *The SWE-bench Illusion*
-([arXiv:2506.12286](https://arxiv.org/abs/2506.12286)) reports **135/500**. A two-instance
-difference, on a corpus I did not build, against a figure I did not choose.
+**The one external reference point.** My solution-leakage detector measures **133/500**; *The
+SWE-bench Illusion* reports **135/500** using a different heuristic (theirs also counts import
+statements, mine counts bare filenames). Corroboration that the leakage is real, not a
+replication of their figure — see the note at the top of this file.
 
 **And the limit of that defence, stated plainly.** The third-party tier validates *one* checker
 against *one* external number. It does **not** de-circularise the headline macro-F1 — that figure
@@ -327,21 +327,25 @@ it, not that the gap is truly 0.044 everywhere.
 
 ### So what does this project actually establish?
 
-Honestly: **that almost none of this job needs an agent, and the part that does is not the part I
-built.** All three defect classes are settled as well by a well-informed reader as by my pipeline.
-The agent ties on its own class; the deterministic checks tie once the baseline sees the same
-evidence. That is a negative result about agents, obtained by running the experiment that could
-refute it — and it is the finding I would carry to a team building RL environments, because it says
-where *not* to spend.
+**A routing result: which defect classes need an agent, and which are waste.** Two of the three are
+settled deterministically, at $0.00, in about a second — and the parity ablation proves a
+well-informed reader settles them too, once shown the same `git` output. Spending a model call
+there buys nothing but latency and an opinion where an exit code was available.
 
-The residual value is not intelligence, it is **defaults and artifacts**: knowing which command to
-run, running it every time without being prompted, and emitting a commit SHA a reviewer can check
-rather than a sentence they have to trust.
+`REWARD_HACKABLE` is the exception, and it is the whole reason an agent is in this pipeline. A
+reward-hackable task **passes the reward gate**: gold patch green, empty patch red, tests that read
+fine. No mechanical criterion the field currently uses separates it from a sound task. The only way
+to establish that a task can be gamed is to game it — so that is the one place the agent is spent,
+and it returns a patch and two exit codes rather than a judgement.
 
-What the agent *does* contribute is not in this table: it produces **executed proof** rather than a
-judgement. When it flags a task, it hands you a patch and two exit codes instead of an opinion. On
-a corpus this small that reads as a tie; at scale, and for the defect a reader cannot confirm
-without running it, that difference is the point.
+That is a finding I would carry to a team building RL environments, because it says where to spend
+and where not to. The measured margin on 15 bundles is small and non-significant, and it is
+reported that way above. What the agent contributes is not a higher score on this corpus: it is
+**executed proof for the one class a reader cannot confirm without running it.**
+
+The rest of the value is **defaults and artifacts** — knowing which command to run, running it
+every time without being prompted, and emitting a commit SHA a reviewer can check rather than a
+sentence they have to trust.
 
 ### The challenging case
 
@@ -486,7 +490,7 @@ Full instructions, including a **free path that needs no API key**, are in
 uv sync
 ./scripts/fetch_real_corpus.sh          # 2.0 MB, checksum-pinned
 uv run python corpus/synthetic/build.py # 15 bundles, labels by construction
-uv run pytest -q                        # 234 tests; pins every third-party-corpus number
+uv run pytest -q                        # 241 tests; pins every third-party-corpus number
 uv run python -m rewardgate.report_real # third-party findings, $0.00
 uv run python -m rewardgate.evaluate --replay   # re-score saved audits offline, $0.00
 ```

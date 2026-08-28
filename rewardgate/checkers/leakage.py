@@ -10,12 +10,19 @@ they must trust.
 
 Validation
 ----------
-"The SWE-bench Illusion" (arXiv:2506.12286) reports that 135 of the 500 SWE-bench Verified
-instances embed the gold file path in the issue text. Running `basename` matching over the public
-dataset reproduces 133/500 — a two-instance difference from an independent research group.
+"The SWE-bench Illusion" (arXiv:2506.12286) reports 135 of 500 SWE-bench Verified instances
+leaking the gold file. This detector measures 133/500 (107 on a full path, 26 more on a bare
+basename).
 
-That agreement is the point. The detector is checked against a defect set the author did not
-create and could not tune against.
+**Those are not the same measurement.** The paper's heuristic, per its §4.2, also fires on import
+statements and is never specified precisely enough to reimplement; mine fires on the basename.
+Two independently written heuristics landing in the same place is corroboration that the leakage
+is real and roughly this common. It is not a reproduction of their figure, and an earlier version
+of this docstring called it "a two-instance difference", which claimed more than the comparison
+supports.
+
+What the third-party corpus does establish is narrower and still worth having: the detector is
+exercised against a defect set the author did not create and could not tune against.
 """
 
 from __future__ import annotations

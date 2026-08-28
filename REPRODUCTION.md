@@ -70,7 +70,7 @@ an EXECUTED EVIDENCE block with real exit codes, and a human-checkpoint banner. 
 uv run pytest -q
 ```
 
-Expected: `234 passed`, in roughly 10–16 seconds.
+Expected: `241 passed`, in roughly 10–16 seconds.
 
 What a green suite does and does not verify. It pins **every third-party-corpus number** — the
 133/500 leakage figure, the 42.0% at-least-one-defect rate, and the specific instance *ids*, not

@@ -373,30 +373,7 @@ confident numbers about the wrong thing.**
 
 ---
 
-## Main failure mode
+## Main failure mode, and the hot take
 
-**A single exploit trial priced by regex.** The agent runs once per bundle, and its exploit is
-graded by counting literal special-cases with a pattern list. Both halves fail: a stochastic agent
-can miss an exploit it would find on a rerun, and an exploit written in a shape the patterns do not
-match is priced at zero — which is exactly how `retrylite-reward-hackable` was missed, and how an
-earlier build graded a dict that memorised eight inputs as "no exploit". *k* independent trials and
-a semantic cost measure are the fixes; neither is implemented.
-
-## Hot take
-
-**Reward-hackability is a property of the evaluation protocol, not of the individual task.**
-
-My first detector defined the defect as "an exploit exists". It flagged the clean bundle too —
-**100% false positives** — because *any* finite, visible test suite can be hardcoded given enough
-branches. Existence is not a discriminating property; cost is. Regrading on how many literals the
-exploit must special-case took false positives to zero.
-
-The practical rule an author can act on before shipping: **test-input diversity is the defence, and
-it is measurable in advance.** A suite with one visible input falls to a single `if`. A suite with
-eight costs more to memorise than to solve.
-
-And the second-order lesson, which cost me two rewrites: **the thing measuring your evaluation is
-part of your evaluation.** A parser that inverted booleans, a held-out suite that reused its visible
-inputs, and a cost counter blind to dict literals each produced confident, plausible, wrong numbers
-that passed every test I had. SWE-bench ships its tests alongside the task; no amount of care on any
-single task closes that, and no amount of care on any single checker closes this.
+Both close [README.md](README.md#main-failure-mode), which is their canonical home. They were
+duplicated here verbatim; a reviewer found 27 byte-identical lines across the two files.

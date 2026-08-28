@@ -123,3 +123,38 @@ def test_an_unrun_noop_trial_blocks_accept():
 
     no_defects = {NOP_PASS: False, CONTAMINATION_GIT: False, REWARD_HACKABLE: False}
     assert decide_verdict(no_defects, ("no-op trial did not run",)) == INDETERMINATE
+
+
+def test_the_blockers_are_actually_wired_into_audit_bundle(monkeypatch, tmp_path):
+    """`nop_ran` and `held_out_ran` were tested as properties, and `decide_verdict` was tested with
+    a hand-passed blocker tuple — but the WIRING between them was untested. A mutation audit
+    removed each blocker from `audit_bundle` and the suite stayed green while the verdict flipped
+    INDETERMINATE -> ACCEPT. That is the fail-open this project exists to catch, in its own
+    pipeline."""
+    import rewardgate.auditor as auditor
+    from rewardgate.checkers.contamination import ContaminationFinding
+    from rewardgate.execution import TestOutcome
+    from rewardgate.exploit import ExploitResult
+    from rewardgate.gates import RewardGateResult
+    from rewardgate.schema import INDETERMINATE
+
+    green = TestOutcome(exit_code=0, passed=4, failed=0, errors=0, stdout="")
+    unrun = TestOutcome(exit_code=5, passed=0, failed=0, errors=0, stdout="")
+    red = TestOutcome(exit_code=1, passed=3, failed=1, errors=0, stdout="")
+    monkeypatch.setattr(auditor, "detect_git_contamination",
+                        lambda d, p: ContaminationFinding(has_git=False))
+    monkeypatch.setattr(auditor, "read_patch", lambda d: "x")
+
+    # (1) the no-op trial never ran
+    monkeypatch.setattr(auditor, "run_reward_gate", lambda d, *a, **k: RewardGateResult(green, unrun))
+    monkeypatch.setattr(auditor, "run_exploit_trial",
+                        lambda d, **k: ExploitResult("b", "diff\n+ x = 1\n", green, green))
+    audit, _ = auditor.audit_bundle(tmp_path, run_exploit=True)
+    assert audit.verdict == INDETERMINATE and audit.error
+
+    # (2) the held-out suite never ran
+    monkeypatch.setattr(auditor, "run_reward_gate", lambda d, *a, **k: RewardGateResult(green, red))
+    monkeypatch.setattr(auditor, "run_exploit_trial",
+                        lambda d, **k: ExploitResult("b", "diff\n+  if row == 'a':\n", green, unrun))
+    audit, _ = auditor.audit_bundle(tmp_path, run_exploit=True)
+    assert audit.verdict == INDETERMINATE and audit.error
