@@ -39,7 +39,7 @@ def main() -> None:
     leaked = sum(f.leaked for f in leakage)
     print(f"SWE-bench Verified — {total} instances, deterministic checks, $0.00\n" + "=" * 78)
     print(line("solution leakage (gold file named)", leaked,
-               note=f"published figure: {PUBLISHED_LEAKAGE} — delta {abs(leaked - PUBLISHED_LEAKAGE)}"))
+               note=f"cf. published {PUBLISHED_LEAKAGE} (different heuristic: theirs also counts imports, mine counts basenames)"))
     print(line("  of which full path (high conf.)", sum(f.confidence == "high" for f in leakage)))
     print(line("over-specified (internal symbol)", sum(f.over_specified for f in overspec)))
     print(line("  high severity (symbol + file)", sum(f.severity == "high" for f in overspec)))

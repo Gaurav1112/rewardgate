@@ -1,11 +1,20 @@
 # RewardGate
 
-## 133 of 500 SWE-bench Verified tasks leak their own answer. An independent paper counts 135.
+## 210 of 500 SWE-bench Verified tasks trip at least one defect check. Deterministically, for $0.00.
 
-The benchmark used to grade coding agents hands the solver the gold file path in the issue text on
-**more than a quarter of its instances**. I did not build that corpus and I did not pick that
-number: *The SWE-bench Illusion* ([arXiv:2506.12286](https://arxiv.org/abs/2506.12286)) reports
-**135/500** independently. My detector, written without reference to theirs, reports **133/500**.
+The benchmark used to grade coding agents leaks the gold file into the issue text, asserts on
+internal symbols, and ships fail-to-pass suites that assert nothing. RewardGate measures all of it
+in about a second on a corpus I did not build.
+
+**On the one claim with an outside reference point, stated precisely.** My leakage detector flags
+**133/500** instances (**107** on a full path, 26 more on a bare filename). *The SWE-bench Illusion*
+([arXiv:2506.12286](https://arxiv.org/abs/2506.12286)) reports **135/500**. Those two numbers are
+close, and they are **not the same measurement**: their §4.2 heuristic also fires on import
+statements, mine fires on the basename, and neither is specified precisely enough to replicate the
+other. Treat it as two independently-written heuristics landing in the same place — corroboration
+that the leakage is real and roughly this common, not a reproduction of their figure. An earlier
+version of this README called it "two apart, on a corpus I did not build", which read as a
+replication it is not.
 
 Across all four checkers, **210 of 500 instances (42.0%)** trip at least one. That is what these
 four checks find — not a ground-truth defect rate — and it is deterministic, takes about a second,
@@ -362,6 +371,27 @@ misattributed while correcting the first. The changelog records both.
 
 ## Prior art, and what is different here
 
+**Two pieces of prior art I had cited in my own design spec and then left out of this section.**
+An adversarial review caught the omission, and it matters because both are closer to this project
+than anything else listed below.
+
+* **[arXiv:2606.16062](https://arxiv.org/abs/2606.16062), *Auditing Reward Hackability in Code RL
+  Training Environments*.** Per-task auditing of code-RL environments, a Docker-verified
+  incorrect-patch pipeline, and an oracle "gold-sanity gate". That is this project's stated framing
+  almost exactly. I cited it in `docs/specs/` for its 28.5% figure and never brought it into the
+  comparison.
+* **[RewardHackBench](https://github.com/islo-labs/reward-hack-bench).** Its contributor workflow
+  already mandates "oracle + nop smoke tests — oracle must succeed and the nop must fail". That is
+  the reward gate, as a documented submission requirement, before this project existed.
+
+So the reward gate is not novel, and neither is per-task auditing of RL environments. What I have
+not found published is the pair that does the actual work here: **adjudicating an exploit
+mechanically by held-out execution with no human in the loop** (Terminal-Bench uses author
+inspection), and **grading on exploit *cost* — the count of literal special-cases — rather than on
+whether an exploit exists at all.** The second is what turned a detector with a 100% false-positive
+rate into one with zero false alarms across six clean bundles.
+
+
 **The closest prior art is Terminal-Bench 2.0** ([arXiv:2601.11868](https://arxiv.org/abs/2601.11868)),
 and the overlap is substantial enough that it needs stating first rather than buried. Its §2.3 and Appendix B describe a pre-merge task QA pipeline that already runs, verbatim:
 
@@ -399,7 +429,7 @@ Also relevant: **SpecBench** ([arXiv:2605.21384](https://arxiv.org/abs/2605.2138
 visible-versus-held-out pass-rate gap, though to grade agents rather than tasks.
 **BenchJack** ([arXiv:2605.12673](https://arxiv.org/abs/2605.12673)) is an automated red-teaming
 system that drives coding agents to audit benchmarks, extended into a discover-and-patch loop:
-219 flaws found, hackable-task ratio driven from ~100% to under 10% across 10 benchmarks. That is
+219 flaws found, hackable-task ratio driven from ~100% to under 10% on the four benchmarks without fatal design flaws (10 were audited). That is
 substantially more than "bulk research", and an earlier draft of this section understated it. **SWE-Bench+** ([arXiv:2410.06992](https://arxiv.org/abs/2410.06992)) and
 **UTBoost** ([arXiv:2506.09289](https://arxiv.org/abs/2506.09289)) precede the leakage and
 weak-assertion checks. The **ABC** paper ([arXiv:2507.02825](https://arxiv.org/abs/2507.02825))

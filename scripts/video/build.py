@@ -123,8 +123,9 @@ SEGMENTS = [
      "Verified, two hundred and ten carry at least one defect. That is forty-two percent. It is "
      "deterministic, and it cost zero dollars. One of those four checkers has an outside anchor. "
      "Mine counts a hundred and thirty-three instances that leak the gold file path into the "
-     "issue text. The SWE-bench Illusion paper reports a hundred and thirty-five. Two apart, on "
-     "a corpus I did not build.",
+     "issue text. The SWE-bench Illusion paper reports a hundred and thirty-five. Close, on "
+     "a corpus I did not build. The two heuristics are not identical, so it is corroboration "
+     "rather than a replication.",
      "$ uv run python -m rewardgate.report_real",
      grep("01_report_real.txt", "leakage", "over-specified", "hint", "weak", "DEFECT", "INDETERM"),
      None, "500 real instances - deterministic - $0.00 - no model calls"),

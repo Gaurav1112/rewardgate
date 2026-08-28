@@ -91,7 +91,7 @@ Runs the four deterministic checkers across all 500 real instances. No model cal
 Expect these five lines among the output (the full block adds a header, a clean-on-all-checks row, and an INDETERMINATE limitation note):
 
 ```
-solution leakage (gold file named)     133/500  ( 26.6%)  published figure: 135 — delta 2
+solution leakage (gold file named)     133/500  ( 26.6%)  cf. published 135 (different heuristic: theirs also counts imports, mine counts basenames)
 over-specified (internal symbol)        42/500  (  8.4%)
 hint discloses gold-patch lines         54/500  ( 10.8%)
 weak fail-to-pass assertions            48/350  ( 13.7%)

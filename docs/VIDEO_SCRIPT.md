@@ -199,7 +199,7 @@ uv run python -m rewardgate.report_real
 ```
 SWE-bench Verified — 500 instances, deterministic checks, $0.00
 ==============================================================================
-solution leakage (gold file named)     133/500  ( 26.6%)  published figure: 135 — delta 2
+solution leakage (gold file named)     133/500  ( 26.6%)  cf. published 135 (different heuristic: theirs also counts imports, mine counts basenames)
   of which full path (high conf.)      107/500  ( 21.4%)
 over-specified (internal symbol)        42/500  (  8.4%)
   high severity (symbol + file)         16/500  (  3.2%)
@@ -213,7 +213,7 @@ clean on all four checks               290/500  ( 58.0%)
 ```
 
 Hold on the `210/500` line while you say "forty-two percent", and on the `133/500 ... published
-figure: 135` line while you say "two apart".
+line while you say the two heuristics land close without being the same measurement.
 
 ---
 

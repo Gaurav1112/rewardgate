@@ -12,8 +12,11 @@ headless mode is also the adversarial exploit agent *inside* the product.
 RewardGate audits a candidate benchmark task before it enters a model-training corpus, and proves
 defects by execution rather than by opinion. Pointed at SWE-bench Verified it finds that **210 of
 500 instances (42.0%) carry at least one defect**, deterministically, for **$0.00** — and one of
-its four checkers independently reproduces a published figure to within two instances (133 vs 135,
-[arXiv:2506.12286](https://arxiv.org/abs/2506.12286)) on a corpus the author did not build. Every
+its four checkers lands close to an independently published figure: 133/500 against the 135/500
+reported by *The SWE-bench Illusion* ([arXiv:2506.12286](https://arxiv.org/abs/2506.12286)) on a
+corpus the author did not build. The two heuristics are not identical — theirs also counts import
+statements, mine counts bare filenames — so this is corroboration that the leakage is real and
+roughly this common, not a reproduction of their number. Every
 positive verdict carries a mechanical artifact: a test exit code, a commit SHA, or an exploit patch
 that turns the visible suite green while the bug the task tests for is untouched.
 
