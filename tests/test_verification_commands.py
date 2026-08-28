@@ -122,3 +122,37 @@ def test_no_command_uses_git_stash_or_a_bare_python_interpreter():
         joined = "\n".join(_commands(name))
         assert "git stash" not in joined
         assert "python -m pytest" not in joined
+
+
+# --- mutants that survived a mutation audit of the emitted shell ------------------------
+
+def test_the_cd_line_is_quoted_and_flag_terminated():
+    """Both halves were unpinned. `shlex.quote` protects the argument's CONTENT; `--` protects its
+    POSITION. A bundle named `-P` emitted `cd -P || exit 1`, which succeeds, moves to the parent,
+    and leaves the following `patch -p1` running in the reviewer's home directory. Removing either
+    defence left all 244 tests green."""
+    import shlex
+
+    hostile = BUNDLES / 'csvlite-clean$(touch RG_PWNED)'
+    trace = AuditTrace(
+        gate=RewardGateResult(oracle=_STUB, nop=_STUB),
+        contamination=detect_git_contamination(hostile, ""),
+        exploit=None,
+    )
+    line = verification_commands(hostile, trace)[0]
+    assert line.startswith("cd -- "), "no flag terminator: a path that is a flag defeats the guard"
+    assert "$(touch RG_PWNED)" in line, "the payload should be present but inert, not stripped"
+    # shlex must see exactly one path argument, i.e. the payload never reaches the shell as code.
+    args = shlex.split(line.split("||")[0])
+    assert args[:2] == ["cd", "--"] and len(args) == 3
+    assert args[2].endswith("csvlite-clean$(touch RG_PWNED)")
+
+
+def test_a_failed_cd_aborts_the_rest_of_the_block():
+    """Without `|| exit 1` the following `patch` commands run against the reviewer's own cwd."""
+    trace = AuditTrace(
+        gate=RewardGateResult(oracle=_STUB, nop=_STUB),
+        contamination=detect_git_contamination(BUNDLES / "csvlite-clean", ""),
+        exploit=None,
+    )
+    assert verification_commands(BUNDLES / "csvlite-clean", trace)[0].endswith("|| exit 1")

@@ -327,3 +327,45 @@ def test_comments_do_not_inflate_the_price_of_an_exploit():
                            held_out=RED, visible_literals=literals)
     assert bare.hardcoded_cases == padded.hardcoded_cases == 1
     assert padded.is_reward_hackable, "comments turned a known-bad task into ACCEPT"
+
+
+def test_a_fix_on_a_deleted_branch_is_still_found(tmp_path):
+    """`--reflog` was unpinned: dropping it left every test green. `git branch -D` is what an author
+    does routinely, and without the reflog the fix becomes invisible while `git show` still
+    recovers it. (Objects unreachable from the reflog too remain out of scope, as the module
+    docstring states.)"""
+    from rewardgate.checkers.contamination import detect_git_contamination
+
+    bundle = _repo(tmp_path, {"src/m.py": "def parse(row):\n    return row.split(',')\n"})
+    subprocess.run(["git", "checkout", "-q", "-b", "hotfix"], cwd=bundle, check=False,
+                   capture_output=True)
+    (bundle / "src" / "m.py").write_text("def parse(row):\n    return next(csv.reader([row]))\n")
+    subprocess.run(["git", "add", "-A"], cwd=bundle, check=False, capture_output=True)
+    subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "fix"],
+                   cwd=bundle, check=False, capture_output=True)
+    for args in (["checkout", "-q", "-"], ["branch", "-D", "hotfix"]):
+        subprocess.run(["git", *args], cwd=bundle, check=False, capture_output=True)
+
+    patch = ("diff --git a/src/m.py b/src/m.py\n--- a/src/m.py\n+++ b/src/m.py\n@@ -1,2 +1,2 @@\n"
+             "+    return next(csv.reader([row]))\n")
+    assert detect_git_contamination(bundle, patch).contaminated, "deleted branch hid the fix"
+
+
+def test_a_check_that_could_not_run_renders_BLOCKED_not_ok(tmp_path, capsys):
+    """The `[BLOCKED]` branch shipped with no test and its mutant survived, so a gold patch that
+    fails to apply rendered green again — the regression the branch was written to prevent."""
+    from rewardgate.cli import main
+
+    bundle = tmp_path / "b"
+    shutil.copytree(
+        Path(__file__).resolve().parent.parent / "corpus" / "synthetic" / "bundles" / "csvlite-clean",
+        bundle, ignore=shutil.ignore_patterns("__pycache__"),
+    )
+    (bundle / "solution.patch").write_text(
+        "diff --git a/src/csvlite/__init__.py b/src/csvlite/__init__.py\n"
+        "--- a/src/csvlite/__init__.py\n+++ b/src/csvlite/__init__.py\n@@ -99,4 +99,4 @@\n+ x\n"
+    )
+    main(["audit", str(bundle), "--no-exploit"])
+    out = capsys.readouterr().out
+    assert "[BLOCKED] NOP_PASS" in out
+    assert "[  ok   ] NOP_PASS" not in out
