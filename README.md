@@ -230,13 +230,48 @@ tests alongside the task, which is exactly why no amount of care on any single t
 
 ## Prior art, and what is different here
 
-**BenchJack** ([arXiv:2605.12673](https://arxiv.org/html/2605.12673v1)) drives coding agents to
-audit benchmarks for reward-hacking exploits, and is the closest published work. The difference is
-posture: BenchJack audits *published benchmarks in bulk, for research*. RewardGate is a
-**pre-submission gate for one task**, run by the author before they hand it over, emitting a
-reviewer-grade verdict rather than a corpus statistic. Related: RewardHackBench, HackDetect, and
-the ABC paper ([arXiv:2507.02825](https://arxiv.org/abs/2507.02825)) on rigorous agentic
-benchmarks.
+**The closest prior art is Terminal-Bench 2.0** ([arXiv:2601.11868](https://arxiv.org/abs/2601.11868)),
+and the overlap is substantial enough that it needs stating first rather than buried. Its Appendix B
+describes a pre-merge task QA pipeline that already runs, verbatim:
+
+> "an automated workflow ran the task's oracle solution to ensure solvability… other checks
+> verified the absence of common failure modes (e.g., a no-op 'dummy' agent should fail the task)."
+
+> "**B.4 Adversarial Exploit Agent.** During task auditing, we run an adversarial exploit agent to
+> attempt to pass the tests by cheating without actually looking at the tests and oracle solutions."
+
+That is oracle + no-op + adversarial exploit agent + git-history hygiene, run by the contributor
+before merge. **It is this project's core loop, published first.** Anyone assessing this work
+should know that before reading further.
+
+What is actually different, and it is narrower than "a new idea":
+
+1. **Terminal-Bench adjudicates its exploit agent by human inspection** ("manually inspected and
+   verified by an author"). Here adjudication is mechanical — held-out execution — so it needs no
+   reviewer in the loop to decide whether an exploit counts.
+2. **Its git check is an LLM lint over the Dockerfile.** This runs `git log -p --all` matched
+   against gold-patch lines, which is what catches a fix parked on a side branch.
+3. **Nobody has published a detection rate for this pipeline.** Terminal-Bench runs it as
+   process; this measures it — F1, false-alarm rate, per-class deltas against a baseline, on a
+   labelled corpus with negative controls. That measurement is the contribution.
+4. **Exploit *cost* rather than exploit *existence*.** Terminal-Bench flags that a cheat was found.
+   Grading on existence gave a 100% false-positive rate here; counting how many literals the cheat
+   must special-case is what made the signal usable. I could not find prior work formalising this.
+
+Also relevant: **SpecBench** ([arXiv:2605.21384](https://arxiv.org/abs/2605.21384)) uses the same
+visible-versus-held-out pass-rate gap, though to grade agents rather than tasks.
+**BenchJack** ([arXiv:2605.12673](https://arxiv.org/abs/2605.12673)) red-teams published benchmarks
+in bulk for research. **SWE-Bench+** ([arXiv:2410.06992](https://arxiv.org/abs/2410.06992)) and
+**UTBoost** ([arXiv:2506.09289](https://arxiv.org/abs/2506.09289)) precede the leakage and
+weak-assertion checks. The **ABC** paper ([arXiv:2507.02825](https://arxiv.org/abs/2507.02825))
+gives the checklist this implements an executable subset of.
+
+**A finding that cuts against this project's design:** **EvilGenie**
+([arXiv:2511.21654](https://arxiv.org/abs/2511.21654)) reports that an LLM judge detected reward
+hacking *highly effectively*, while held-out tests added little lift. This project bets the
+opposite way — execution over judgement — on the basis of the 18.5% evaluator-misalignment figure
+above. Both can be true in different regimes, and I have not tested an LLM judge here, so treat
+the anti-judge stance as a design choice with contrary evidence rather than a settled result.
 
 ## What I deliberately did not do
 
@@ -251,12 +286,27 @@ benchmarks.
 
 ## Safety
 
-The exploit agent writes code, so it is contained three ways: it runs against a **disposable temp
-copy**, its tools are restricted to read/edit plus `pytest` (no network, no arbitrary shell), and
-`held_out/`, `solution.patch` and `.git` are **stripped before it starts** — the contaminated
-bundles' history literally contains the answer. A **human checkpoint** is required before any
-`REJECT` is finalised. The exploits exist so gameable tasks are rejected *before* they train a
-model.
+**Trust model, stated plainly: `rewardgate audit` executes code from the bundle you point it at.**
+That is inherent — the reward gate's whole job is running the task's test suite — and it is true
+even under `--no-exploit`. Run it on bundles you authored, or inside a container. This is a
+pre-submission self-check, not a tool for auditing strangers' submissions on your laptop.
+
+What containment there is: the agent works on a **disposable temp copy**, its tool surface is
+restricted to read/edit plus `pytest`, and `held_out/`, `solution.patch` and `.git` are **stripped
+before it starts** — the contaminated bundles' history literally contains the answer. A **human
+checkpoint** is required before any `REJECT` is finalised, and a check that cannot run now returns
+`INDETERMINATE` rather than defaulting to `ACCEPT`.
+
+**What that containment does not do, because an adversarial review demonstrated it.** An earlier
+version of this section claimed "no network, no arbitrary shell". That was wrong. The tool
+allowlist constrains what the *agent* may invoke; it does not constrain the code the agent is
+explicitly asked to write, and the harness then executes that code — so a patch containing
+`import os` at module scope runs on the host. A reviewer also demonstrated a full escape by
+writing `conftest.py`, which pytest imports. Proper isolation means a container with no network,
+and that is **not implemented** — it is the largest outstanding gap in this project.
+
+The exploits exist so gameable tasks are rejected *before* they train a model. See
+[LICENSE](LICENSE) for intended use.
 
 ## Run it
 
