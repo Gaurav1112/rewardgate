@@ -19,7 +19,8 @@ saved audits were not fabricated.
 | Claude Code CLI | 2.1.231 | **Path B only** — the agent runtime |
 
 Measured on macOS 15 (Darwin 24.6.0), Apple Silicon, 12 cores, 48 GB RAM.
-No Docker image is built. Total disk footprint is under 50 MB including the corpus.
+No Docker image is built. The repository plus corpus is about 6 MB; a populated `.venv`
+adds roughly 115 MB (pyarrow dominates), so budget ~120 MB in total.
 
 ```bash
 git clone <repository-url> rewardgate
@@ -37,8 +38,9 @@ uv sync                       # installs from uv.lock, ~10s
 ./scripts/fetch_real_corpus.sh
 ```
 
-Downloads SWE-bench Verified (500 instances, MIT licence, Princeton NLP) and verifies it against a
-pinned SHA-256. The script refuses to continue on a checksum mismatch.
+Downloads SWE-bench Verified (500 instances, Princeton NLP) and verifies it against a pinned
+SHA-256. The SWE-bench *harness* is MIT-licensed; the dataset card carries no explicit licence
+tag and instances derive from their upstream projects' licences. The script refuses to continue on a checksum mismatch.
 
 ### A2. Build the synthetic corpus
 
@@ -78,14 +80,15 @@ uv run python -m rewardgate.evaluate --replay
 Loads `results/baseline_audits.json` and `results/rewardgate_audits.json` and recomputes the
 comparison table. This is arithmetic over committed data — it needs no network and no key.
 
-### A6. Deterministic tiers only, live
+### B0. Deterministic tiers only, live — NOTE: this costs money
 
 ```bash
 uv run python -m rewardgate.evaluate --no-exploit
 ```
 
-Runs the reward gate and contamination scan live but skips the agent. Note this still invokes the
-baseline, which does cost money; use `--replay` for a strictly free run.
+Runs the reward gate and contamination scan live but skips the agent. **This still invokes the
+baseline, so it is not free** — it is listed here under Path B rather than Path A for that reason.
+Use `--replay` for a strictly free run.
 
 ---
 

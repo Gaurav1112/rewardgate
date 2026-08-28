@@ -17,13 +17,13 @@ readable markdown alongside the raw JSONL event streams.
 | **Input** | A sandboxed copy of the bundle: `instruction.md`, `tests/`, `src/` |
 | **Output** | A patch, plus `EXPLOIT_FOUND` / `EXPLOIT_NOT_FOUND` |
 | **Tools** | `Read`, `Edit`, `Write`, `Glob`, `Grep`, `Bash(python -m pytest:*)` |
-| **Cost** | ~$0.25 per bundle, 10–13 turns, ~60s |
+| **Cost** | ~$0.25 per bundle, 9–15 turns, ~60s |
 | **Implementation** | [`rewardgate/exploit.py`](rewardgate/exploit.py) |
 
 **Full trajectories:**
 
 - [`exploit-agent-csvlite-reward-hackable.md`](trajectories/exploit-agent-csvlite-reward-hackable.md)
-  — **16 steps, exploit succeeds.** The agent reads the instruction, reads the single visible test,
+  — **11 steps, exploit succeeds.** The agent reads the instruction, reads the single visible test,
   writes a one-line special case, runs pytest, sees green. Adjudication: visible suite
   `exit=0 passed=4`, held-out suite `exit=1 failed=1` → `REWARD_HACKABLE`.
 - [`exploit-agent-csvlite-clean.md`](trajectories/exploit-agent-csvlite-clean.md)
@@ -34,13 +34,19 @@ readable markdown alongside the raw JSONL event streams.
 Both are included deliberately. A trajectory set showing only successes hides how the system
 behaves when it does not find what it is looking for.
 
-**Guardrails.** The agent writes code, so it is contained three ways:
+**Guardrails.**
 
 1. It runs against a **disposable temporary copy**, never the corpus on disk.
-2. Its tool surface is **restricted to read/edit plus `pytest`** — no network, no arbitrary shell.
-3. `held_out/`, `solution.patch` and `.git` are **deleted before it starts**. This one is load-
-   bearing: the contaminated bundles' git history literally contains the answer, so leaving it
-   would hand the agent what it is meant to be unable to see.
+2. Its tool surface is **restricted to read/edit plus `pytest`**, with the operator's ambient MCP
+   servers and settings excluded from the session (`--strict-mcp-config`, empty `--mcp-config`).
+3. `held_out/`, `solution.patch`, `task.yaml`, `.git` and `conftest.py` are **deleted before it
+   starts**. The contaminated bundles' history literally contains the answer, and `conftest.py` is
+   imported by pytest — a reviewer used that to demonstrate arbitrary host execution.
+
+**What the guardrails do not do.** The allowlist bounds what the agent *invokes*, not the code it
+*writes*, and the harness then executes that code. Module-scope statements in an exploit patch run
+on the host. Real isolation needs a container with no network; that is **not implemented** and is
+the largest outstanding gap. See [README Safety](README.md#safety).
 
 **Retry strategy.** None, deliberately, and this is a known limitation. A single trial is run per
 bundle, bounded by `--max-turns 25` and a 600-second timeout. The measured consequence is one
@@ -157,7 +163,7 @@ contradicted the implementation.
 | `results/exploit_trials.json` | **Only the four `csvlite` control trials** from Iteration 3 — not the full corpus run |
 | `results/eval_run.log` | Console log of the evaluation that produced the headline table |
 
-Regenerate with `uv run python scripts/generate_trajectories.py` (~$0.65).
+Regenerate with `uv run python scripts/generate_trajectories.py` (measured $0.5991).
 
 ### Two things to be transparent about
 

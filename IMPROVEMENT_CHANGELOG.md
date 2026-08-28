@@ -208,7 +208,7 @@ flowed through it — I had tested the checkers and the scorer, and never the pa
 | baseline exact-match | 0/12 | **9/15** |
 | improvement | +133.3% | **+78.2%** |
 
-**Decision.** Claim withdrawn, narrative rewritten, 16 tests added to `schema.py`. The real
+**Decision.** Claim withdrawn, narrative rewritten, 11 tests added to `schema.py` (30 parametrised cases). The real
 baseline is a competent opponent that ties on `NOP_PASS` and fails only where execution is
 required — a smaller and more defensible result than the one I nearly submitted.
 

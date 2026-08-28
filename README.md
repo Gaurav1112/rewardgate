@@ -53,8 +53,9 @@ They find out a task is broken days later, from a reviewer. And the base rate of
 small — **OpenAI's own audit** of 1,699 SWE-bench tasks found **38.3% had underspecified problem
 statements**, **61.1% had unit tests that unfairly fail valid solutions**, and **68.3% were
 filtered out entirely** ([OpenAI](https://openai.com/index/introducing-swe-bench-verified/)).
-OpenAI [retired SWE-bench Verified in 2026](https://openai.com/index/why-we-no-longer-evaluate-swe-bench-verified/)
-citing flawed tests and leakage.
+OpenAI [stopped reporting SWE-bench Verified in 2026](https://openai.com/index/why-we-no-longer-evaluate-swe-bench-verified/),
+citing flawed tests and contamination. (They stopped using it; the dataset is Princeton's and
+still exists.)
 
 Checking a task properly today means building a container, running the suite twice, and reading
 git history by hand. So it mostly does not happen — and the expensive defects are precisely the
