@@ -1,7 +1,26 @@
 # RewardGate
 
-**Audits a candidate benchmark / RL-environment task before it enters a training corpus — and
-proves defects by execution rather than by opinion.**
+## 42% of SWE-bench Verified is defective. Here is the tool that measures it, for $0.00.
+
+**210 of 500** instances in the benchmark used to grade coding agents carry at least one defect
+that makes them measure something other than what they claim. That number is deterministic, takes
+about a second, needs no API key, and you can reproduce it yourself in three commands.
+
+One of the four checkers behind it has an outside anchor. Mine counts **133/500** instances that
+leak the gold file path into the issue text. *The SWE-bench Illusion*
+([arXiv:2506.12286](https://arxiv.org/abs/2506.12286)) independently reports **135/500**. Two
+apart, on a corpus I did not build, against a figure I did not choose.
+
+```bash
+git clone https://github.com/Gaurav1112/rewardgate && cd rewardgate
+uv sync && ./scripts/fetch_real_corpus.sh
+uv run python -m rewardgate.report_real
+```
+
+RewardGate audits a candidate benchmark or RL-environment task *before* it enters a training
+corpus, and **proves defects by execution rather than by opinion** — every positive verdict carries
+a test exit code, a commit SHA, or an exploit patch that turns a suite green while the bug it tests
+for is untouched.
 
 ---
 
