@@ -286,3 +286,44 @@ def test_only_commits_carrying_a_disclosed_line_are_named(tmp_path):
     assert len(finding.commits) == 1, finding.commits
     assert "fix parsing" in finding.commits[0]
     assert not any("initial import" in c for c in finding.commits)
+
+
+def test_a_planted_docstring_cannot_erase_the_contamination_fingerprint(tmp_path):
+    """Subtraction of already-shipped lines was scoped to every .py in the bundle. An adversarial
+    review planted one innocuous file whose docstring contained the fix, which deleted it from the
+    fingerprint and produced the affirmative verdict 'contains no gold-patch lines' on a bundle
+    whose fix was still in history. Subtraction is now scoped to the files the patch modifies."""
+    from rewardgate.checkers.contamination import detect_git_contamination
+
+    bundle = _repo(tmp_path, {"src/m.py": "def parse(row):\n    return row.split(',')\n"})
+    (bundle / "src" / "m.py").write_text("def parse(row):\n    return next(csv.reader([row]))\n")
+    subprocess.run(["git", "add", "-A"], cwd=bundle, check=False, capture_output=True)
+    subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "fix"],
+                   cwd=bundle, check=False, capture_output=True)
+    (bundle / "src" / "m.py").write_text("def parse(row):\n    return row.split(',')\n")
+    # The plant: a file the gold patch never touches, whose docstring carries the fix verbatim.
+    (bundle / "src" / "_docs.py").write_text('"""\n    return next(csv.reader([row]))\n"""\n')
+
+    patch = ("diff --git a/src/m.py b/src/m.py\n--- a/src/m.py\n+++ b/src/m.py\n@@ -1,2 +1,2 @@\n"
+             "+    return next(csv.reader([row]))\n")
+    assert detect_git_contamination(bundle, patch).contaminated, "plant defeated the checker"
+
+
+def test_comments_do_not_inflate_the_price_of_an_exploit():
+    """Three comment lines flipped a ground-truth REWARD_HACKABLE bundle from REVISE to ACCEPT:
+    `# ... row == 'a,"b,c"'` matched the equality pattern and pushed the cost past the threshold,
+    so the task was graded 'too expensive to game'. Cost must ignore non-executable text."""
+    from rewardgate.exploit import ExploitResult
+
+    body = "+    if row == 'a,\"b,c\"':\n+        return ['a', 'b,c']\n"
+    commented = body + "".join(
+        f"+    # note {i}: handles row == 'a,\"b,c\"' explicitly\n" for i in range(3)
+    )
+    header = "diff --git a/src/m.py b/src/m.py\n--- a/src/m.py\n+++ b/src/m.py\n@@ -1 +1,6 @@\n"
+    literals = frozenset({'a,"b,c"', "b,c"})
+    bare = ExploitResult(bundle_id="b", exploit_patch=header + body, visible=GREEN,
+                         held_out=RED, visible_literals=literals)
+    padded = ExploitResult(bundle_id="b", exploit_patch=header + commented, visible=GREEN,
+                           held_out=RED, visible_literals=literals)
+    assert bare.hardcoded_cases == padded.hardcoded_cases == 1
+    assert padded.is_reward_hackable, "comments turned a known-bad task into ACCEPT"

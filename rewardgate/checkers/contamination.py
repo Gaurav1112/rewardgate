@@ -2,7 +2,14 @@
 
 A task is contaminated when the fix is recoverable from the repository shipped with it. The
 working tree can be correctly unfixed and `git log --oneline` can look entirely innocent while the
-solution still sits in a reverted commit, an abandoned branch, or a dangling object.
+solution still sits in a reverted commit or an abandoned branch.
+
+**Stated limitation.** `git log -p --all --reflog` walks refs and the reflog. It does *not* reach
+unreferenced objects. An adversarial review showed that `git branch -D` followed by
+`git reflog expire --expire=now --all` hides a fix that `git fsck --lost-found` still recovers in
+one command, and this checker reports that bundle clean. Covering it needs
+`git cat-file --batch-all-objects`. The docstring previously claimed dangling objects were covered.
+They are not.
 
 This is why the reviewing rule is *inspect `.git` by content, not by presence*. Checking whether a
 `.git` directory exists tells you nothing: a squashed baseline reveals no more than no history at
@@ -19,7 +26,7 @@ import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from rewardgate.diffutil import added_lines
+from rewardgate.diffutil import added_lines, files_in_patch
 
 _MIN_SIGNIFICANT_LENGTH = 12
 _COMMENT = re.compile(r"^\s*(#|//|\*)")
@@ -29,22 +36,31 @@ def _normalise(line: str) -> str:
     return re.sub(r"\s+", " ", line).strip()
 
 
-def _shipped_lines(bundle_dir: Path) -> set[str]:
-    """Every source line already visible in the bundle as shipped.
+def _shipped_lines(bundle_dir: Path, only_paths: set[str]) -> set[str]:
+    """Lines already visible in the shipped source of the files the gold patch actually modifies.
 
-    Read from the working tree rather than from git, because the question is what a solver can see
-    without touching history at all.
+    Scoped, and comment-filtered. An earlier version unioned every line of every `.py` under the
+    bundle, including docstrings — so an adversarial review defeated the checker by planting one
+    innocuous file whose docstring contained the fix. That deleted the line from the fingerprint
+    and produced the affirmative verdict "git history present and contains no gold-patch lines"
+    on a bundle whose fix was still sitting in history.
+
+    Subtraction exists to drop lines a gold patch merely restates. It must not be reachable from
+    a file the patch never touches.
     """
     lines: set[str] = set()
-    for path in bundle_dir.rglob("*.py"):
-        parts = set(path.parts)
-        if ".git" in parts or "held_out" in parts or "__pycache__" in parts:
+    for rel in sorted(only_paths):
+        path = bundle_dir / rel
+        if not path.is_file():
             continue
         try:
             text = path.read_text()
         except (OSError, UnicodeDecodeError):
             continue
-        lines.update(_normalise(line) for line in text.splitlines())
+        for raw in text.splitlines():
+            if _COMMENT.match(raw):
+                continue
+            lines.add(_normalise(raw))
     return lines
 
 
@@ -154,7 +170,7 @@ def detect_git_contamination(bundle_dir: Path, solution_patch: str) -> Contamina
     # a hunk regenerated with less context — and history containing those lines only proves the
     # baseline was committed. An adversarial review turned a *clean* bundle into a REJECT this way,
     # citing the innocent `initial import` commit as the contaminating one.
-    solution_lines -= _shipped_lines(bundle_dir)
+    solution_lines -= _shipped_lines(bundle_dir, files_in_patch(solution_patch))
     if not solution_lines:
         return ContaminationFinding(
             has_git=True,
@@ -164,7 +180,7 @@ def detect_git_contamination(bundle_dir: Path, solution_patch: str) -> Contamina
 
     try:
         # --all walks every ref, which is what surfaces a fix parked on a side branch.
-        disclosed = solution_lines & added_lines_in(["log", "-p", "--all"])
+        disclosed = solution_lines & added_lines_in(["log", "-p", "--all", "--reflog"])
         # The current branch alone is what a reviewer sees by default.
         on_current = bool(solution_lines & added_lines_in(["log", "-p"]))
 

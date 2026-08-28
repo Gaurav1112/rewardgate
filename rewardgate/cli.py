@@ -12,6 +12,7 @@ on trust.
 from __future__ import annotations
 
 import argparse
+import shlex
 import sys
 from pathlib import Path
 
@@ -105,8 +106,14 @@ def verification_commands(bundle_dir: Path, trace: AuditTrace) -> list[str]:
         shown = bundle_dir.resolve().relative_to(Path.cwd())
     except ValueError:
         shown = bundle_dir
+    # shlex.quote, because `bundle_dir` is the untrusted artifact this tool exists to audit and
+    # this block is explicitly sold as "paste this to check my claims". A bundle directory named
+    # `csvlite-clean$(touch RG_PWNED)` executed on the reviewer's machine when they pasted line
+    # one. `|| exit` chains it: without that, a failed `cd` left the following `patch` commands
+    # running against the reviewer's own working directory -- the same "operates on the enclosing
+    # repo" class as the `git stash` bug this block was rewritten to fix.
     commands = [
-        f"cd {shown}",
+        f"cd {shlex.quote(str(shown))} || exit 1",
         "uv run pytest tests/ -q                             # no-op:  expect failures",
         "patch -p1 < solution.patch && uv run pytest tests/ -q  # oracle: expect all pass",
         "patch -R -p1 < solution.patch                       # restore the tree",
