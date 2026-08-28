@@ -5,39 +5,6 @@ proves defects by execution rather than by opinion.**
 
 ---
 
-## Read this first: how I avoided grading my own homework
-
-The obvious failure mode for a project like this is circular. If I author the defects *and* build
-the detector, precision and recall measure nothing but my own imagination. So the evidence is split
-into two tiers, and the more important one is not mine:
-
-| Tier | Corpus | Authored by | What it establishes |
-|---|---|---|---|
-| **Third-party** | [SWE-bench Verified](https://huggingface.co/datasets/princeton-nlp/SWE-bench_Verified), 500 real instances | Princeton NLP — **not me** | The text checkers find real defects in a real, widely-used benchmark |
-| Synthetic | 15 bundles, 3 self-authored micro-repos | Me | Baseline-vs-agent comparison on defects requiring execution |
-
-**The cross-validation that matters:** my solution-leakage detector independently measures
-**133/500** instances leaking the gold file path in the issue text. *The SWE-bench Illusion*
-([arXiv:2506.12286](https://arxiv.org/abs/2506.12286)) reports **135/500**. A two-instance
-difference, on a corpus I did not build, against a figure I did not choose.
-
-**And the limit of that defence, stated plainly.** The third-party tier validates *one* checker
-against *one* external number. It does **not** de-circularise the headline macro-F1 — that figure
-is measured entirely on 15 self-authored bundles whose labels come from the injector that created
-them, n=3 per class. The over-specification, hint and weak-assertion rates have no external anchor
-at all. Treat the 42.0% defect rate as "what these four checkers find", not as ground truth about
-SWE-bench.
-
-**What does make the synthetic comparison meaningful** is the negative controls: three
-`clean-git-history` bundles carrying real multi-commit histories that do *not* contain the fix.
-Without them, "does `.git` exist?" would score a perfect contamination F1. With them, the
-contamination number measures the checker rather than the corpus.
-
-False-positive rate is reported everywhere, never just recall — see [Measured
-improvement](#measured-improvement).
-
----
-
 ## Who has this problem
 
 **A contractor paid per accepted task to author agentic coding benchmarks.** Surge AI advertises
@@ -144,6 +111,39 @@ while the bug it tests for is untouched.
 
 ---
 
+### Why these numbers are not circular
+
+The obvious failure mode for a project like this is circular. If I author the defects *and* build
+the detector, precision and recall measure nothing but my own imagination. So the evidence is split
+into two tiers, and the more important one is not mine:
+
+| Tier | Corpus | Authored by | What it establishes |
+|---|---|---|---|
+| **Third-party** | [SWE-bench Verified](https://huggingface.co/datasets/princeton-nlp/SWE-bench_Verified), 500 real instances | Princeton NLP — **not me** | The text checkers find real defects in a real, widely-used benchmark |
+| Synthetic | 15 bundles, 3 self-authored micro-repos | Me | Baseline-vs-agent comparison on defects requiring execution |
+
+**The cross-validation that matters:** my solution-leakage detector independently measures
+**133/500** instances leaking the gold file path in the issue text. *The SWE-bench Illusion*
+([arXiv:2506.12286](https://arxiv.org/abs/2506.12286)) reports **135/500**. A two-instance
+difference, on a corpus I did not build, against a figure I did not choose.
+
+**And the limit of that defence, stated plainly.** The third-party tier validates *one* checker
+against *one* external number. It does **not** de-circularise the headline macro-F1 — that figure
+is measured entirely on 15 self-authored bundles whose labels come from the injector that created
+them, n=3 per class. The over-specification, hint and weak-assertion rates have no external anchor
+at all. Treat the 42.0% defect rate as "what these four checkers find", not as ground truth about
+SWE-bench.
+
+**What does make the synthetic comparison meaningful** is the negative controls: three
+`clean-git-history` bundles carrying real multi-commit histories that do *not* contain the fix.
+Without them, "does `.git` exist?" would score a perfect contamination F1. With them, the
+contamination number measures the checker rather than the corpus.
+
+False-positive rate is reported everywhere, never just recall — see [Measured
+improvement](#measured-improvement).
+
+---
+
 ## Measured improvement
 
 15 bundles × 3 defect classes = **45 binary judgements** per system. Identical cases, identical
@@ -153,7 +153,13 @@ output schema, identical scorer. All figures below come from
 **Primary metric: macro-F1.** Macro because the classes are unbalanced; F1 rather than accuracy
 because most pairs are negatives, so a system flagging nothing would score well on accuracy.
 
-| METRIC | BASELINE | REWARDGATE | ABSOLUTE Δ |
+> **This table is superseded — do not quote the +0.333.** It compares against a baseline shown
+> `git log --oneline`, which cannot see a fix parked on a side branch. Given the *same* evidence the
+> baseline scores **0.889** and the real gap is **0.044** at **p = 1.00**. The fair comparison is
+> [below](#the-ablation-that-refutes-the-headline). This table is kept because the changelog should
+> show what I measured before I tested my own assumption, not only after.
+
+| METRIC | BASELINE (unfair) | REWARDGATE | ABSOLUTE Δ |
 |---|---:|---:|---:|
 | **macro-F1 (primary)** | 0.600 | **0.933** | **+0.333** |
 | macro precision | 0.667 | 1.000 | +0.333 |
