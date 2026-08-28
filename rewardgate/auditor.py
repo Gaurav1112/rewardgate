@@ -42,6 +42,10 @@ class AuditTrace:
     gate: RewardGateResult
     contamination: object
     exploit: ExploitResult | None
+    # Defect classes whose check could not be measured. The renderer marked these by substring-
+    # matching the evidence prose and missed most of them, printing `[  ok   ]` for an unrunnable
+    # gate and for a held-out suite that collected nothing.
+    blocked: frozenset[str] = frozenset()
 
 
 def decide_verdict(defects: dict[str, bool], blockers: tuple[str, ...] = ()) -> str:
@@ -141,4 +145,15 @@ def audit_bundle(
         duration_ms=exploit.duration_ms if exploit else 0,
         error="; ".join(blockers),
     )
-    return audit, AuditTrace(gate=gate, contamination=contamination, exploit=exploit)
+    blocked: set[str] = set()
+    if gate.patch_error or not gate.nop_ran or gate.is_unsolvable_defect:
+        blocked.add(NOP_PASS)
+    if getattr(contamination, "indeterminate", False):
+        blocked.add(CONTAMINATION_GIT)
+    if exploit is None or exploit.error or (
+        exploit.produced_patch and exploit.visible_green
+        and (not exploit.held_out_ran or not exploit.cost_measurable)
+    ):
+        blocked.add(REWARD_HACKABLE)
+    return audit, AuditTrace(gate=gate, contamination=contamination, exploit=exploit,
+                             blocked=frozenset(blocked))

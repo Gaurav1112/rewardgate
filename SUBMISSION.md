@@ -59,6 +59,13 @@ headline — free, under a second).
    gap against a *fair* baseline is 0.044 at McNemar p = 1.00, not the 0.333 I first measured. Both
    numbers, and why the first was wrong, are in the changelog.
 
+## Code freeze
+
+Code frozen after the fifth adversarial review round. Defects found after the freeze are
+**documented below rather than fixed**, because the measured regression rate on this repository's
+security-hardening edits was roughly one in two: two round-4 exploits defeated round-3 fixes, and
+four round-5 exploits defeated round-4 fixes. An unverified late fix is worse than a disclosed bug.
+
 ## Known limitations, stated up front
 
 - The exploit trial runs **once** per bundle and its cost is priced by regex. A stochastic agent
@@ -68,4 +75,16 @@ headline — free, under a second).
   executes it, so module-scope code in that patch runs on the host. Disclosed, not mitigated.
 - Representative trajectories exist for the two agents that ship inside the product. The
   development-time agents are documented as reconstructions, and labelled as such.
+- **The contamination scope set is read from the audited patch.** `files_in_patch(solution_patch)`
+  decides which files are subtracted from the fingerprint, and the bundle author writes that patch.
+  A reviewer demonstrated a contaminated bundle certifying clean by appending a hunk for a planted
+  decoy file whose shipped body contains the fix as ordinary code. The subtraction should compare
+  against the pre-image of the hunk it actually applies to. Confirmed, not fixed.
+- **Exploit cost is still not invariant to non-executable text.** Comment stripping handles `#` but
+  not docstrings, so three `Example: row == "a,b,c"` lines inside a `"""` block price as three
+  special-cases and flip REVISE to ACCEPT. The hand-rolled quote scanner also desyncs on
+  `'''`-with-apostrophe. This needs `tokenize`, not regex. Confirmed, not fixed.
+- **`files_in_patch` parses only `diff --git a/<no-spaces>`.** POSIX `diff -u`, `--no-prefix`,
+  quoted paths and renames all yield an empty or wrong set, which silently disables the subtraction
+  above. No corpus bundle exercises it, so no test catches it. Confirmed, not fixed.
 - The synthetic comparison is n=15 on three self-authored micro-repos. It is not a general claim.

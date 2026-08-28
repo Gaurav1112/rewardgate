@@ -168,8 +168,8 @@ def render_report(audit: Audit, trace: AuditTrace, bundle_dir: Path) -> str:
         # A class nobody looked at must not render as `ok`. On `--no-exploit` the report was
         # byte-identical for a clean bundle and a known reward-hackable one apart from the test
         # counts, and both said ACCEPT.
-        evidence = audit.evidence.get(defect, "")
-        blocked = any(w in evidence for w in ("failed to apply", "INDETERMINATE", "did not run"))
+        # From the auditor's computed set, not a substring guess at its prose.
+        blocked = defect in trace.blocked
         if defect == REWARD_HACKABLE and skipped:
             marker = "skipped"
         elif present:
