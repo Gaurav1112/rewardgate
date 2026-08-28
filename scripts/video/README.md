@@ -40,3 +40,20 @@ mocks.
 stream-copying the per-segment AAC files appended 16 seconds of encoder priming padding that walked
 the slides out of sync with the voice reading them. Both are fixed in `compose.py`; the durations
 are asserted against the audio track at build time rather than assumed.
+
+## Recording it in your own voice
+
+The composer times each slide to the length of its audio clip, so replacing the narration needs no
+re-editing — the slides re-time themselves around your pacing.
+
+```bash
+uv run python scripts/video/record_narration.py        # 12 clips, ENTER to start/stop each
+uv run python scripts/video/record_narration.py 3 7    # retake only 3 and 7
+uv run --with pillow python scripts/video/compose.py   # rebuild
+```
+
+Twelve clips, 11–34 seconds each, ~4.6 minutes of speech in total. Each section prints its own
+text before recording, so no separate teleprompter is needed. Terminal needs microphone permission
+under System Settings → Privacy & Security → Microphone the first time.
+
+`tts_backup/` holds the synthetic take. Copy it back over `out/` to restore it.
