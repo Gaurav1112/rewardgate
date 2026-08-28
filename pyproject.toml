@@ -1,0 +1,29 @@
+[project]
+name = "rewardgate"
+version = "0.1.0"
+description = "Audits candidate benchmark / RL-environment tasks by proving defects through execution."
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    "pyyaml==6.0.2",
+    "rich==13.9.4",
+    "pyarrow==18.1.0",
+]
+
+[project.scripts]
+rewardgate = "rewardgate.cli:main"
+
+[dependency-groups]
+dev = [
+    "pytest==8.3.4",
+]
+
+[build-system]
+requires = ["hatchling==1.27.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["rewardgate"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
