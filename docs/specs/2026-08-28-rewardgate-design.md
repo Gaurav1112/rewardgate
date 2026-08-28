@@ -3,7 +3,24 @@
 **Date:** 2026-08-28
 **Event:** micro1 Agentic Workflows Hackathon (closes 2026-08-31 18:00 UTC)
 **Author:** Kumar Gaurav
-**Status:** Locked for implementation
+**Status:** Locked pre-implementation — **historical record, not a description of what shipped**
+
+> **Read this first.** This is the design as locked *before* building, kept unedited so the
+> planning can be compared against the outcome. Several things here did not ship, and the
+> [Improvement Changelog](../../IMPROVEMENT_CHANGELOG.md) is the authoritative account:
+>
+> * "4 self-authored micro-repos" — **3** shipped (csvlite, semverlite, retrylite).
+> * "pass@1 and pass^3 across 3 seeds" — **not implemented**; a single trial per bundle is run,
+>   and that limitation is reported in the README.
+> * "[A2] Report Synthesizer, one LLM call" — **removed**. The report is rendered
+>   deterministically; no model is involved.
+> * "Two LLM agents, four deterministic checkers" — shipped as **one** agent plus deterministic
+>   tiers.
+> * "Docker footprint under 2 GB" / "under 8 minutes" — no Docker is used; the full run takes
+>   28.5 minutes.
+> * "Two held-out defect classes excluded from prompt development" — not implemented.
+> * The challenging case here is a *reverted commit*; the corpus ships a **side-branch** commit,
+>   because the reverted version left the fix visible in `git log --oneline`.
 
 ---
 
@@ -90,6 +107,19 @@ signs.
 and five trajectories to document, while producing weaker evidence than one `pytest` exit code.
 
 ## 5. Evaluation
+
+### What "good" means, declared before running
+
+Fixed in this spec at commit time, before any evaluation was executed:
+
+* **Primary metric:** macro-F1 over (bundle × defect class).
+* **Success bar:** RewardGate beats the baseline on macro-F1 *and* does not exceed the baseline's
+  false-alarm rate on clean bundles. Precision was prioritised over recall because the output is a
+  rejection, and a false positive costs an author a rewrite they did not need.
+* **Disqualifying outcome:** any headline gain that disappears when a single defect class is
+  removed is to be reported as such rather than as a general improvement.
+
+That last condition fired. See the drop-one-class analysis in the README.
 
 **Primary metric:** macro-F1 over `cases × defect classes` binary judgements.
 Chosen over per-case accuracy because it has more resolution — one flipped case moves the number

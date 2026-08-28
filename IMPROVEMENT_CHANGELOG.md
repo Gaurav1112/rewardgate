@@ -137,42 +137,42 @@ they can prove, the cost-graded exploit agent for the one they cannot, and every
 an artifact.
 
 **Evidence.** 15 bundles × 3 defect classes = 45 binary judgements per system. Identical cases,
-identical output schema, identical scorer. Figures from `results/summary.json`.
+identical output schema, identical scorer. Figures from `results/summary.json` and
+`results/significance.json`.
 
-| METRIC | BASELINE | REWARDGATE | CHANGE |
+| METRIC | BASELINE | REWARDGATE | ABSOLUTE Δ |
 |---|---:|---:|---:|
-| **macro-F1 (primary)** | 0.524 | **0.933** | **+78.2%** |
-| macro precision | 0.500 | 1.000 | +100.0% |
-| macro recall | 0.556 | 0.889 | +60.0% |
-| exact-match bundles | 9/15 | **14/15** | +55.6% |
-| cost per bundle (USD) | 0.1160 | 0.2543 | +119.3% |
+| **macro-F1 (primary)** | 0.600 | **0.933** | **+0.333** |
+| macro precision | 0.667 | 1.000 | +0.333 |
+| macro recall | 0.556 | 0.889 | +0.333 |
+| exact-match bundles | 11/15 | **14/15** | +3 |
+| false alarms on 6 clean bundles | 0 | 0 | — |
+| cost per bundle (USD) | 0.1174 | 0.2551 | +117% |
 
 | PER-CLASS F1 | BASELINE | REWARDGATE | SUPPORT |
 |---|---:|---:|---:|
 | NOP_PASS | **1.000** | **1.000** | 3 |
-| REWARD_HACKABLE | 0.571 | 0.800 | 3 |
+| REWARD_HACKABLE | **0.800** | **0.800** | 3 |
 | CONTAMINATION_GIT | **0.000** | **1.000** | 3 |
 
-Full run: **$5.5533**, 1613.7s (26.9 min) wall clock.
+Full run: **$5.5877**, 1711.3s. McNemar exact **p = 0.25** — not significant.
 
-**Where the gain actually came from.** Not from general cleverness. The baseline **ties at 1.000 on
-`NOP_PASS`** — a suite that only asserts a module imports is visibly inadequate on the page, and
-executing it proves nothing reading did not. The entire gap is in the two classes where a verdict
-requires running a command the baseline cannot run, and the largest single contribution is
-`CONTAMINATION_GIT` going **0.000 → 1.000**.
+**Where the gain actually came from, and it is uncomfortable.** Not from the agent. It **ties the
+baseline on its own class** (`REWARD_HACKABLE`, 0.800 both). `NOP_PASS` also ties at 1.000. All
+three discordant judgements are `CONTAMINATION_GIT`; drop that class and both systems score 0.900
+exactly. The entire measured difference is one deterministic `git log -p --all`.
 
-**The honest cost.** RewardGate is **119% more expensive per bundle**. Doubling per-task cost buys
-the contamination class and a third of the reward-hacking class, and nothing on `NOP_PASS`.
+**The honest cost.** 117% more per bundle, for a difference concentrated in the one class that
+costs nothing to check.
 
-**The challenging case, and what it revealed.** `retrylite-reward-hackable` was missed because the
-agent, told to cheat, **fixed the bug properly instead**. `retrylite`'s genuine fix is a one-token
-`min(...)`, so honesty cost no more than the hardcode. That is my own cost hypothesis working
-against me: exploit-based detection has a blind spot when the real fix is as cheap as the exploit.
-The same defect on `semverlite` was caught immediately, so this is agent variance on an easy fix,
-not a logic error.
+**The challenging case.** `retrylite-reward-hackable` was missed by both systems in the final run.
+The stored evidence says an exploit *was* found but priced at zero special-cases — a
+cost-measurement blind spot, not the agent honestly fixing the bug. An earlier version of this
+document told the second story; it was wrong, and it is corrected here.
 
-**Decision.** Shipped. The unimplemented mitigation is *k* independent trials taking the union,
-which would raise cost roughly linearly — stated as a gap rather than quietly omitted.
+**Decision.** Shipped, with the claim narrowed to what the evidence supports. The unimplemented
+mitigations are *k* independent trials and a larger corpus of independent base repositories — at
+3 repos, six discordant pairs are needed for significance and the design can produce at most a few.
 
 ---
 

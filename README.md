@@ -153,48 +153,69 @@ output schema, identical scorer. All figures below come from
 **Primary metric: macro-F1.** Macro because the classes are unbalanced; F1 rather than accuracy
 because most pairs are negatives, so a system flagging nothing would score well on accuracy.
 
-| METRIC | BASELINE | REWARDGATE | CHANGE |
+| METRIC | BASELINE | REWARDGATE | ABSOLUTE Δ |
 |---|---:|---:|---:|
-| **macro-F1 (primary)** | 0.524 | **0.933** | **+78.2%** |
-| macro precision | 0.500 | 1.000 | +100.0% |
-| macro recall | 0.556 | 0.889 | +60.0% |
-| exact-match bundles | 9/15 | **14/15** | +55.6% |
-| cost per bundle (USD) | 0.1160 | 0.2543 | +119.3% |
+| **macro-F1 (primary)** | 0.600 | **0.933** | **+0.333** |
+| macro precision | 0.667 | 1.000 | +0.333 |
+| macro recall | 0.556 | 0.889 | +0.333 |
+| exact-match bundles | 11/15 | **14/15** | +3 bundles |
+| false alarms on 6 clean bundles | 0 | 0 | — |
+| cost per bundle (USD) | 0.1174 | 0.2551 | +117% |
 
 | PER-CLASS F1 | BASELINE | REWARDGATE | SUPPORT |
 |---|---:|---:|---:|
 | NOP_PASS | **1.000** | **1.000** | 3 |
-| REWARD_HACKABLE | 0.571 | 0.800 | 3 |
+| REWARD_HACKABLE | **0.800** | **0.800** | 3 |
 | CONTAMINATION_GIT | **0.000** | **1.000** | 3 |
 
-Full run: **$5.55**, 1613.7s (26.9 min) wall clock.
+Full run: **$5.5877**, 1711.3s (28.5 min) wall clock.
 
-### The baseline is a real opponent, and it wins one class outright
+### Read this before the headline: the difference is one `git` command
 
-It flagged all three defects on **zero** of 15 bundles and got **9/15 exactly right**. This is not
-a straw man — a careful reader with the same artifacts genuinely solves much of this problem, and
-the per-class table shows precisely where reading stops being enough.
+Absolute deltas are given above rather than percentages, because percentage change off a 0.000
+denominator manufactures magnitude. And the per-class table is the real result:
 
-**`NOP_PASS` — a tie at 1.000.** A fail-to-pass suite that only asserts a module imports is visibly
-inadequate on the page. Executing it proves the same thing the reading did. **The agent adds
-nothing here, and the honest conclusion is that this class does not need one.**
+**The agent ties the baseline on its own defect class.** `REWARD_HACKABLE` is 0.800 for both. The
+adversarial exploit agent — the expensive, novel component, at 117% higher cost — did not beat a
+careful reader at the one thing it exists to do.
 
-**`CONTAMINATION_GIT` — 0.000 versus 1.000, the largest single gap.** The baseline sees
-`git log --oneline`, which is innocent: the fix lives on a side branch. It missed all three
-contaminated bundles. It also correctly passed all three *clean-git* bundles — so its 0.000 is a
-genuine miss, not indiscriminate caution. Only `git log -p --all` finds the fix, and that is a
-command, not a judgement.
+**`NOP_PASS` also ties at 1.000.** A suite that only asserts a module imports is visibly inadequate
+on the page; executing it proves nothing that reading did not.
 
-**`REWARD_HACKABLE` — 0.571 versus 0.800.** The baseline can sometimes tell that a single-input
-test looks thin. It cannot tell whether an exploit actually works, and on `semverlite-clean-git-history`
-it guessed wrong and flagged a sound task.
+**Every measured judgement that separates the two systems is `CONTAMINATION_GIT`.** All 3
+discordant pairs are that class. Drop it and both systems score **0.900 exactly**
+([`results/significance.json`](results/significance.json)). The baseline sees `git log --oneline`,
+which is innocent because the fix sits on a side branch; only `git log -p --all` finds it. That is
+a command, not a judgement, and it costs nothing.
 
-**Where the improvement really comes from:** not from being cleverer than the baseline, but from
-the two classes where a verdict requires running a command the baseline cannot run. That is a
-narrower claim than "+78% overall", and it is the one the evidence supports.
+### The difference is not statistically significant
 
-**The honest cost:** RewardGate is **119% more expensive per bundle**. Doubling per-task cost to
-recover the contamination class is a trade a reviewer would take, but it is a trade.
+Run `uv run python -m rewardgate.significance`:
+
+| | |
+|---|---|
+| McNemar exact, two-sided | **p = 0.25** (3 discordant, all favouring RewardGate) |
+| Paired accuracy, baseline | 0.867 [0.788, 0.975] |
+| Paired accuracy, RewardGate | 0.978 [0.882, 0.999] — **intervals overlap** |
+| False-alarm rate on clean bundles | 0/6, but CI [0.000, **0.459**] |
+| always-yes floor | macro-F1 **0.333** — the floor is not zero |
+
+With all discordance one-way, McNemar gives `p = 2 × 0.5ⁿ`, so **six** discordant pairs are needed
+for p < 0.05. This design produced three. The experiment cannot reach significance at this size —
+that is a property of using 15 bundles built from **3 independent base repositories**, not a
+property of the result. "1.000 precision" is consistent with a true false-alarm rate up to 46%.
+
+### So what does this project actually establish?
+
+Honestly: **that most of this job does not need an agent.** Two of three defect classes are settled
+as well by reading as by executing, and the only reliable win is a deterministic history scan. That
+is a negative result about agents, obtained by measuring rather than assuming — and it is the
+finding I would carry to a team building RL environments, because it says where to spend.
+
+What the agent *does* contribute is not in this table: it produces **executed proof** rather than a
+judgement. When it flags a task, it hands you a patch and two exit codes instead of an opinion. On
+a corpus this small that reads as a tie; at scale, and for the defect a reader cannot confirm
+without running it, that difference is the point.
 
 ### The challenging case
 
@@ -337,3 +358,33 @@ the SWE-bench Verified dataset, which is third-party public data fetched by
 `scripts/fetch_real_corpus.sh` and not vendored. Built with Claude Code as the coding agent; the
 adversarial exploit agent is the Claude Code CLI in headless mode. No credentials are stored in
 this repository.
+
+---
+
+## Main failure mode
+
+**A single exploit trial priced by regex.** The agent runs once per bundle, and its exploit is
+graded by counting literal special-cases with a pattern list. Both halves fail: a stochastic agent
+can miss an exploit it would find on a rerun, and an exploit written in a shape the patterns do not
+match is priced at zero — which is exactly how `retrylite-reward-hackable` was missed, and how an
+earlier build graded a dict that memorised eight inputs as "no exploit". *k* independent trials and
+a semantic cost measure are the fixes; neither is implemented.
+
+## Hot take
+
+**Reward-hackability is a property of the evaluation protocol, not of the individual task.**
+
+My first detector defined the defect as "an exploit exists". It flagged the clean bundle too —
+**100% false positives** — because *any* finite, visible test suite can be hardcoded given enough
+branches. Existence is not a discriminating property; cost is. Regrading on how many literals the
+exploit must special-case took false positives to zero.
+
+The practical rule an author can act on before shipping: **test-input diversity is the defence, and
+it is measurable in advance.** A suite with one visible input falls to a single `if`. A suite with
+eight costs more to memorise than to solve.
+
+And the second-order lesson, which cost me two rewrites: **the thing measuring your evaluation is
+part of your evaluation.** A parser that inverted booleans, a held-out suite that reused its visible
+inputs, and a cost counter blind to dict literals each produced confident, plausible, wrong numbers
+that passed every test I had. SWE-bench ships its tests alongside the task; no amount of care on any
+single task closes that, and no amount of care on any single checker closes this.

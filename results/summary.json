@@ -1,0 +1,25 @@
+{
+  "bundles": 15,
+  "defect_classes": 3,
+  "judgements_per_system": 45,
+  "wall_clock_seconds": 1711.3,
+  "total_cost_usd": 5.5877,
+  "baseline": {
+    "macro_f1": 0.6,
+    "macro_precision": 0.6667,
+    "macro_recall": 0.5556,
+    "exact_match": 11,
+    "cost_usd": 1.7606,
+    "cost_per_bundle_usd": 0.1174,
+    "errors": 0
+  },
+  "rewardgate": {
+    "macro_f1": 0.9333,
+    "macro_precision": 1.0,
+    "macro_recall": 0.8889,
+    "exact_match": 14,
+    "cost_usd": 3.8271,
+    "cost_per_bundle_usd": 0.2551,
+    "errors": 0
+  }
+}

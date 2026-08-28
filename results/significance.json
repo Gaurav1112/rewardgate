@@ -1,0 +1,49 @@
+{
+  "judgements_per_system": 45,
+  "independent_base_repos": 3,
+  "mcnemar": {
+    "both_correct": 41,
+    "only_baseline_correct": 0,
+    "only_rewardgate_correct": 3,
+    "both_wrong": 1,
+    "p_value": 0.25,
+    "significant_at_0.05": false
+  },
+  "paired_accuracy_ci": {
+    "baseline": [
+      0.7878,
+      0.9752
+    ],
+    "rewardgate": [
+      0.8823,
+      0.9994
+    ]
+  },
+  "false_alarms_on_clean_bundles": {
+    "clean_bundles": 6,
+    "baseline": 0,
+    "rewardgate": 0,
+    "rewardgate_rate_ci": [
+      0.0,
+      0.4593
+    ]
+  },
+  "macro_f1": {
+    "baseline": 0.6,
+    "rewardgate": 0.9333
+  },
+  "degenerate_baselines": {
+    "always_yes": 0.3333,
+    "always_no": 0.0
+  },
+  "drop_one_class_rewardgate": {
+    "without_NOP_PASS": 0.9,
+    "without_REWARD_HACKABLE": 1.0,
+    "without_CONTAMINATION_GIT": 0.9
+  },
+  "drop_one_class_baseline": {
+    "without_NOP_PASS": 0.4,
+    "without_REWARD_HACKABLE": 0.5,
+    "without_CONTAMINATION_GIT": 0.9
+  }
+}
