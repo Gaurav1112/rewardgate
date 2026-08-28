@@ -38,8 +38,8 @@ BORDER = (48, 54, 61)
 
 F_TAKE = B.mono(31)
 F_CAP = B.mono(28)
-F_TERM = B.mono(23)
-F_TINY = B.mono(19)
+F_TERM = B.mono(31)
+F_TINY = B.mono(21)
 
 # (takeaway, [(substring to find, callout label)]) per section index.
 META: dict[int, tuple[str, list[tuple[str, str]]]] = {
@@ -65,6 +65,40 @@ META: dict[int, tuple[str, list[tuple[str, str]]]] = {
     11: ("The cheapest mechanism that can prove a claim is usually not a model.", []),
 }
 LANDING_TAKE = "Everything above reproduces from a clean clone, free, with no API key."
+
+
+# The narration spells numbers out because `say` mispronounces "0.600" and "-p --all". Captions
+# must not inherit those crutches: at 1:15 the caption read "macro F one of zero point six zero
+# zero" while the panel directly above it showed `macro-F1  0.600`.
+UNSPEAK = [
+    ("macro F one of zero point six zero zero", "macro-F1 of 0.600"),
+    ("zero point six zero zero", "0.600"),
+    ("zero point eight eight nine", "0.889"),
+    ("zero point nine three three", "0.933"),
+    ("zero point zero four four", "0.044"),
+    ("p equals one point zero zero", "p = 1.00"),
+    ("git log dash p dash dash all", "git log -p --all"),
+    ("git log oneline", "git log --oneline"),
+    ("macro F one", "macro-F1"),
+    ("forty-two percent", "42%"),
+    ("sixty-eight percent", "68%"),
+    ("sixty-two percent", "62%"),
+    ("two hundred and ten", "210"),
+    ("five hundred", "500"),
+    ("a hundred and thirty-three", "133"),
+    ("a hundred and thirty-five", "135"),
+    ("two hundred and twenty-nine", "229"),
+    ("forty-five", "45"),
+    ("eleven of fifteen", "11 of 15"),
+    ("A hundred percent", "100%"),
+    ("bool of the string false is true", "bool('false') is True"),
+]
+
+
+def for_caption(text: str) -> str:
+    for phonetic, written in UNSPEAK:
+        text = text.replace(phonetic, written)
+    return text
 
 
 def colour_for(line: str) -> tuple[int, int, int]:
@@ -130,9 +164,15 @@ def slide(path: Path, title: str, lines: list[str], takeaway: str, caption: str,
             d.text((112, y), ln, font=F_TERM, fill=fill)
             for needle, label in list(note_targets.items()):
                 if needle in ln:
+                    text = f"<- {label}"
                     x = 112 + int(d.textlength(ln, font=F_TERM)) + 26
-                    if x < B.W - 340:
-                        d.text((x, y + 3), f"<- {label}", font=F_TINY, fill=B.WARN)
+                    # Guard where the label ENDS. Guarding its start clipped the callout on the
+                    # 42% slide -- the most important number in the video -- for 31 seconds.
+                    if x + d.textlength(text, font=F_TINY) < B.W - 100:
+                        d.text((x, y + 3), text, font=F_TINY, fill=B.WARN)
+                    else:
+                        y += F_TERM.size + 11
+                        d.text((150, y), text, font=F_TINY, fill=B.WARN)
                     note_targets.pop(needle, None)
             y += F_TERM.size + 11
         if y > bottom - 40:
@@ -182,7 +222,7 @@ def main() -> None:
 
     for i, (text, title, lines, _hero, footer) in enumerate(B.SEGMENTS):
         take, callouts = META.get(i, ("", []))
-        chunks = caption_chunks(text)
+        chunks = caption_chunks(for_caption(text))
         weights = [max(len(c), 1) for c in chunks]
         span = section_secs[i]
         for j, chunk in enumerate(chunks):

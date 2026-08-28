@@ -9,4 +9,4 @@ RewardGate                           0.933       1.000    14/15    3.8271
 parity baseline vs RewardGate: 0 judgements only the baseline got right, 1 only RewardGate, McNemar exact p = 1.0000
 discordant: semverlite-nop-pass/REWARD_HACKABLE
 
-saved -> /Users/user/rewardgate/results/parity_ablation.json
+saved -> <repo>/results/parity_ablation.json

@@ -80,7 +80,7 @@ EXPLOIT PATCH (this is what made the visible suite pass)
 VERIFY THIS YOURSELF
 ------------------------------------------------------------------------------
 
-  cd /Users/user/rewardgate/corpus/synthetic/bundles/csvlite-reward-hackable
+  cd <repo>/corpus/synthetic/bundles/csvlite-reward-hackable
   uv run pytest tests/ -q                             # no-op:  expect failures
   patch -p1 < solution.patch && uv run pytest tests/ -q  # oracle: expect all pass
   patch -R -p1 < solution.patch                       # restore the tree

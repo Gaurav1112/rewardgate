@@ -1,15 +1,15 @@
 # RewardGate
 
-## 42% of SWE-bench Verified is defective. Here is the tool that measures it, for $0.00.
+## 133 of 500 SWE-bench Verified tasks leak their own answer. An independent paper counts 135.
 
-**210 of 500** instances in the benchmark used to grade coding agents carry at least one defect
-that makes them measure something other than what they claim. That number is deterministic, takes
-about a second, needs no API key, and you can reproduce it yourself in three commands.
+The benchmark used to grade coding agents hands the solver the gold file path in the issue text on
+**more than a quarter of its instances**. I did not build that corpus and I did not pick that
+number: *The SWE-bench Illusion* ([arXiv:2506.12286](https://arxiv.org/abs/2506.12286)) reports
+**135/500** independently. My detector, written without reference to theirs, reports **133/500**.
 
-One of the four checkers behind it has an outside anchor. Mine counts **133/500** instances that
-leak the gold file path into the issue text. *The SWE-bench Illusion*
-([arXiv:2506.12286](https://arxiv.org/abs/2506.12286)) independently reports **135/500**. Two
-apart, on a corpus I did not build, against a figure I did not choose.
+Across all four checkers, **210 of 500 instances (42.0%)** trip at least one. That is what these
+four checks find — not a ground-truth defect rate — and it is deterministic, takes about a second,
+needs no API key, and reproduces in three commands.
 
 ```bash
 git clone https://github.com/Gaurav1112/rewardgate && cd rewardgate
@@ -77,7 +77,7 @@ Both see the same bundles, emit the same schema, and are scored by the same func
 | **Capability** | It can *settle* `REWARD_HACKABLE`. The baseline can only form an opinion about it; the pipeline writes an exploit patch, runs it, and shows the visible suite green while the held-out suite is red. Under the fair (parity) comparison this is also the only class where the two differ: F1 **0.800** vs **0.667**. |
 | **Reliability** | Every positive verdict carries a mechanical artifact — an exit code, a commit SHA, an exploit patch. Nothing rests on a model's assertion, which matters given a measured **18.5% evaluator–human misalignment rate** in LLM-as-judge ([arXiv:2607.02577](https://arxiv.org/abs/2607.02577)). |
 | **Coverage** | Two of three classes are settled **deterministically at $0.00**, so they can run in CI on every task, not just on a sample. |
-| **Engineering quality** | A check that cannot run returns `INDETERMINATE`, never `ACCEPT` — including on `--no-exploit`, where only two of three classes are examined. 229 tests, exit codes that distinguish "broken" from "uncheckable", and a documented bundle contract. |
+| **Engineering quality** | A check that cannot run returns `INDETERMINATE`, never `ACCEPT` — including on `--no-exploit`, where only two of three classes are examined. 234 tests, exit codes that distinguish "broken" from "uncheckable", and a documented bundle contract. |
 
 **And the honest limit, stated here rather than buried.** On the primary metric the advantage is
 small: macro-F1 **0.933** against a fair baseline's **0.889** on 15 bundles, one discordant
@@ -456,7 +456,7 @@ Full instructions, including a **free path that needs no API key**, are in
 uv sync
 ./scripts/fetch_real_corpus.sh          # 2.0 MB, checksum-pinned
 uv run python corpus/synthetic/build.py # 15 bundles, labels by construction
-uv run pytest -q                        # 229 tests; pins every third-party-corpus number
+uv run pytest -q                        # 234 tests; pins every third-party-corpus number
 uv run python -m rewardgate.report_real # third-party findings, $0.00
 uv run python -m rewardgate.evaluate --replay   # re-score saved audits offline, $0.00
 ```
@@ -466,7 +466,8 @@ To audit a task of your own rather than one from this corpus, the required layou
 
 ```bash
 uv run rewardgate audit path/to/my-task --no-exploit
-# exit 0 = ACCEPT, 1 = defect proven, 3 = a check could not run and no verdict is claimed
+# exit 1 = defect proven, 3 = a check could not run. Under --no-exploit only 2 of 3
+# classes are examined, so exit 0 (ACCEPT) requires the full pipeline.
 ```
 
 ## Documents

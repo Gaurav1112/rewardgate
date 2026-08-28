@@ -115,7 +115,8 @@ def test_an_exploit_whose_technique_is_unrecognised_is_reported_as_unpriced():
 # --- the harness must not inherit the operator's environment --------------------------
 
 @pytest.mark.parametrize(
-    "hostile", ["FORCE_COLOR", "PY_COLORS", "PYTEST_ADDOPTS", "PYTEST_PLUGINS", "PYTHONHASHSEED"]
+    "hostile", ["FORCE_COLOR", "PY_COLORS", "PYTEST_ADDOPTS", "PYTEST_PLUGINS", "GH_TOKEN",
+     "AWS_SECRET_ACCESS_KEY", "SSH_AUTH_SOCK", "ANTHROPIC_API_KEY"]
 )
 def test_variables_that_would_corrupt_the_measurement_are_stripped(hostile, tmp_path):
     """Counts are scraped from pytest's summary line, so `FORCE_COLOR=1` wraps them in ANSI and
@@ -133,6 +134,27 @@ def test_variables_that_would_corrupt_the_measurement_are_stripped(hostile, tmp_
         assert hostile not in bundle._test_env()
     finally:
         os.environ.pop(hostile, None)
+
+
+def test_the_environment_is_an_allowlist_not_a_denylist(tmp_path):
+    """A denylist can only enumerate the variables its author thought of. An adversarial review
+    found GH_TOKEN, AUTH0_CLIENT_SECRET, SENDGRID_API_KEY and a live SSH_AUTH_SOCK reaching
+    module-scope code in an agent-written patch, because the scrub started from os.environ.copy()."""
+    from rewardgate.execution import MaterialisedBundle
+
+    os.environ["TOTALLY_NOVEL_SECRET_XYZ"] = "shh"
+    try:
+        env = MaterialisedBundle(tmp_path)._test_env()
+        assert set(env) <= {"PATH", "HOME", "LANG", "LC_ALL", "TMPDIR", "PYTHONPATH",
+                            "PYTHONHASHSEED"}, f"unexpected variables leaked: {set(env)}"
+    finally:
+        os.environ.pop("TOTALLY_NOVEL_SECRET_XYZ", None)
+
+
+def test_hash_seed_is_pinned_so_iteration_order_cannot_move_a_verdict(tmp_path):
+    from rewardgate.execution import MaterialisedBundle
+
+    assert MaterialisedBundle(tmp_path)._test_env()["PYTHONHASHSEED"] == "0"
 
 
 def test_pythonpath_is_set_outright_not_prepended(tmp_path):

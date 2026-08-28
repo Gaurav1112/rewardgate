@@ -8,7 +8,7 @@ uv run --with pillow python scripts/video/build.py     # narration + first pass
 uv run --with pillow python scripts/video/compose.py   # slides + final mux
 ```
 
-Output: `rewardgate-demo.mp4`, 1920×1080, 4:47.
+Output: `rewardgate-demo.mp4`, 1920×1080, 4:41.
 
 ## Stated plainly: the narration is synthetic
 
@@ -32,7 +32,7 @@ truncates the patch for display.
 **The agent tier was broken.** Capturing a live `rewardgate audit` for the demo failed with
 `mcpServers: Invalid input: expected record, received undefined` — a Claude Code CLI change had
 made `--mcp-config '{}'` invalid, so *every* exploit trial errored. The audit correctly returned
-`INDETERMINATE` rather than `ACCEPT`, so the fail-closed design held, but 229 tests never touch the
+`INDETERMINATE` rather than `ACCEPT`, so the fail-closed design held, but 234 tests never touch the
 real CLI invocation and none of them noticed. Recording a demo exercised a boundary the test suite
 mocks.
 

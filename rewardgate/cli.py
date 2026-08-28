@@ -98,8 +98,15 @@ def verification_commands(bundle_dir: Path, trace: AuditTrace) -> list[str]:
     # repository, and `git apply` then interprets the diff's paths relative to *that* repo's root
     # rather than the bundle. It exits 0 having patched nothing: the oracle command silently
     # reports the unfixed suite's failures. `patch -p1` is cwd-relative and has no repo semantics.
+    # Relative where possible. The absolute form published the operator's home directory into
+    # every captured report, and three of those captures were committed to a public repository
+    # after the history had already been scrubbed once.
+    try:
+        shown = bundle_dir.resolve().relative_to(Path.cwd())
+    except ValueError:
+        shown = bundle_dir
     commands = [
-        f"cd {bundle_dir}",
+        f"cd {shown}",
         "uv run pytest tests/ -q                             # no-op:  expect failures",
         "patch -p1 < solution.patch && uv run pytest tests/ -q  # oracle: expect all pass",
         "patch -R -p1 < solution.patch                       # restore the tree",
@@ -154,10 +161,19 @@ def render_report(audit: Audit, trace: AuditTrace, bundle_dir: Path) -> str:
         # A class nobody looked at must not render as `ok`. On `--no-exploit` the report was
         # byte-identical for a clean bundle and a known reward-hackable one apart from the test
         # counts, and both said ACCEPT.
+        evidence = audit.evidence.get(defect, "")
+        blocked = any(w in evidence for w in ("failed to apply", "INDETERMINATE", "did not run"))
         if defect == REWARD_HACKABLE and skipped:
             marker = "skipped"
+        elif present:
+            marker = "DEFECT "
+        elif blocked:
+            # A check that could not run must not render green. A user with a corrupt gold patch
+            # read "[  ok   ] NOP_PASS" and nearly moved on; the real cause was only in a trailing
+            # BLOCKED: line, below the table they were actually scanning.
+            marker = "BLOCKED"
         else:
-            marker = "DEFECT " if present else "  ok   "
+            marker = "  ok   "
         lines.append(f"[{marker}] {defect}")
         lines.append(f"          {audit.evidence.get(defect, '')}")
         if present:

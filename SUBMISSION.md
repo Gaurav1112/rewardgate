@@ -23,7 +23,7 @@ that turns the visible suite green while the bug the task tests for is untouched
 |---|---|---|
 | 1 | Solution code + Improvement Changelog | the repository; [`IMPROVEMENT_CHANGELOG.md`](IMPROVEMENT_CHANGELOG.md) |
 | 2 | Reproduction guide | [`REPRODUCTION.md`](REPRODUCTION.md) — free path, no API key |
-| 3 | Solution video (≤5 min) | `rewardgate-demo.mp4`, script in [`docs/VIDEO_SCRIPT.md`](docs/VIDEO_SCRIPT.md) |
+| 3 | Solution video (≤5 min) | [`rewardgate-demo.mp4`](rewardgate-demo.mp4) (in this repo), script in [`docs/VIDEO_SCRIPT.md`](docs/VIDEO_SCRIPT.md) |
 | 4 | Agent trajectories | [`AGENT_TRAJECTORIES.md`](AGENT_TRAJECTORIES.md) and [`trajectories/`](trajectories/) |
 
 ## Baseline and advanced solution

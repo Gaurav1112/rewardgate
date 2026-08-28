@@ -115,22 +115,23 @@ class MaterialisedBundle:
         from its arguments, so passing an absolute path to `tests/` puts the bundle-root conftest
         above confcutdir and it is silently never loaded.
         """
-        env = os.environ.copy()
-        # Strip anything that changes pytest's output or selection. `_parse_pytest_counts` reads
-        # the human-readable summary line, so an ambient `FORCE_COLOR=1` — routine in CI and in
-        # some uv/npm shells — wraps the counts in ANSI escapes and every trial parses as
-        # `passed=0 failed=0`. That reads as "the suite collected nothing", every bundle becomes
-        # INDETERMINATE, and the published macro-F1 is unreproducible on the reviewer's machine
-        # for a reason nothing in the output discloses. `PYTEST_ADDOPTS` is worse: it can silently
-        # deselect tests, so a task's suite passes because it ran nothing.
-        for hostile in (
-            "FORCE_COLOR", "PY_COLORS", "NO_COLOR", "PYTEST_ADDOPTS", "PYTEST_PLUGINS",
-            "PYTHONHASHSEED", "PYTHONDONTWRITEBYTECODE", "PYTHONWARNINGS",
-        ):
-            env.pop(hostile, None)
-        # Set outright rather than prepending: the operator's PYTHONPATH could otherwise shadow
-        # the bundle's own `src` with a same-named module.
+        # ALLOWLIST, not a denylist. This started as `os.environ.copy()` with a handful of
+        # pytest-cosmetic variables popped, which meant every secret in the operator's shell
+        # reached module-scope code in an agent-written patch. On the machine this was developed
+        # on that included GH_TOKEN, AUTH0_CLIENT_SECRET, SENDGRID_API_KEY, NPM_AUTH_TOKEN and a
+        # live SSH_AUTH_SOCK -- an agent socket that can sign as the user.
+        #
+        # A denylist can only ever enumerate the variables its author happened to think of. The
+        # harness needs five variables to run pytest; everything else is the operator's business
+        # and none of the agent's.
+        env = {
+            name: os.environ[name]
+            for name in ("PATH", "HOME", "LANG", "LC_ALL", "TMPDIR")
+            if name in os.environ
+        }
         env["PYTHONPATH"] = str(self.repo / "src")
+        # Deterministic hashing, so set and dict iteration order cannot move a test outcome.
+        env["PYTHONHASHSEED"] = "0"
         return env
 
     def run_tests(self, test_dir: Path, timeout: int = DEFAULT_TIMEOUT_SECONDS) -> TestOutcome:

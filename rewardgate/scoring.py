@@ -132,9 +132,11 @@ def format_comparison(baseline: Score, advanced: Score) -> str:
     """Render the baseline-vs-final table the brief asks for."""
 
     def change(before: float, after: float) -> str:
-        if before == 0:
-            return "+inf" if after > 0 else "0.0"
-        return f"{(after - before) / before * 100:+.1f}%"
+        # Absolute, not percentage. Percentage change off a near-zero denominator manufactures
+        # magnitude -- this printed "+55.6%" for a 0.333 macro-F1 difference, and kept printing it
+        # after the README had retracted that comparison as measured against an unfair baseline.
+        # The tool must not advertise a number its own documentation withdraws.
+        return f"{after - before:+.4f}"
 
     lines = [
         f"{'METRIC':<28}{'BASELINE':>12}{'REWARDGATE':>14}{'CHANGE':>12}",

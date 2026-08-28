@@ -70,7 +70,7 @@ an EXECUTED EVIDENCE block with real exit codes, and a human-checkpoint banner. 
 uv run pytest -q
 ```
 
-Expected: `229 passed`, in roughly 10–16 seconds.
+Expected: `234 passed`, in roughly 10–16 seconds.
 
 What a green suite does and does not verify. It pins **every third-party-corpus number** — the
 133/500 leakage figure, the 42.0% at-least-one-defect rate, and the specific instance *ids*, not
@@ -88,7 +88,7 @@ uv run python -m rewardgate.report_real
 
 Runs the four deterministic checkers across all 500 real instances. No model calls, no cost.
 
-Expected, exactly:
+Expect these five lines among the output (the full block adds a header, a clean-on-all-checks row, and an INDETERMINATE limitation note):
 
 ```
 solution leakage (gold file named)     133/500  ( 26.6%)  published figure: 135 — delta 2
@@ -107,8 +107,8 @@ uv run python -m rewardgate.evaluate --replay
 Loads `results/baseline_audits.json` and `results/rewardgate_audits.json` and recomputes the
 comparison table. This is arithmetic over committed data — it needs no network and no key.
 
-Expected: `baseline macro-F1=0.6` and
-`rewardgate macro-F1=0.9333`, exact-match
+Expected: `baseline macro-F1=0.600` and
+`rewardgate macro-F1=0.933`, exact-match
 11/15 and 14/15.
 
 ### A5b. Check the statistics
@@ -129,7 +129,7 @@ Re-scores the committed parity audits. **$0.00, under a second.** This is the mo
 result in the report, so it has a free path: a judge should not have to take the retraction on
 trust any more than the original claim.
 
-Expected, exactly:
+Expect these five lines among the output (the full block adds a header, a clean-on-all-checks row, and an INDETERMINATE limitation note):
 
 ```
 SYSTEM                            macro-F1   CONTAM F1   exact      cost

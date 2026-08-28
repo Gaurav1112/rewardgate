@@ -14,4 +14,4 @@ clean on all four checks               290/500  ( 58.0%)
 
 Limitation stated plainly: 150/500 instances are INDETERMINATE for assertion analysis (the diff adds no test function, or is a mid-file hunk that does not parse). Those are excluded from the weak-assertion rate rather than counted as clean.
 
-saved -> /Users/user/rewardgate/results/real_corpus_findings.json
+saved -> <repo>/results/real_corpus_findings.json
