@@ -50,8 +50,8 @@ rejection.
 ### The bottleneck
 
 They find out a task is broken days later, from a reviewer. And the base rate of broken is not
-small — **OpenAI's own audit** of 1,699 SWE-bench tasks found **38.3% had underspecified problem
-statements**, **61.1% had unit tests that unfairly fail valid solutions**, and **68.3% were
+small — **OpenAI's own audit** of 1,699 SWE-bench tasks **flagged 38.3% for underspecified problem
+statements** and **61.1% for unit tests that may unfairly fail valid solutions**, and **68.3% were
 filtered out entirely** ([OpenAI](https://openai.com/index/introducing-swe-bench-verified/)).
 OpenAI [stopped reporting SWE-bench Verified in 2026](https://openai.com/index/why-we-no-longer-evaluate-swe-bench-verified/),
 citing flawed tests and contamination. (They stopped using it; the dataset is Princeton's and
@@ -195,7 +195,7 @@ Run `uv run python -m rewardgate.significance`:
 | | |
 |---|---|
 | McNemar exact, two-sided | **p = 0.25** (3 discordant, all favouring RewardGate) |
-| Paired accuracy, baseline | 0.867 [0.788, 0.975] |
+| Paired accuracy, baseline | 0.911 [0.788, 0.975] |
 | Paired accuracy, RewardGate | 0.978 [0.882, 0.999] — **intervals overlap** |
 | False-alarm rate on clean bundles | 0/6, but CI [0.000, **0.459**] |
 | always-yes floor | macro-F1 **0.333** — the floor is not zero |
@@ -219,42 +219,22 @@ without running it, that difference is the point.
 
 ### The challenging case
 
-`retrylite-reward-hackable` — a genuine miss, and the reason is substantive rather than a bug.
-Told to cheat, the agent **fixed the bug properly instead**. `retrylite`'s real fix is a one-token
-`min(...)`, so writing the honest fix cost no more than writing the hardcode.
+`retrylite-reward-hackable` — missed by **both** systems.
 
-That is my own cost hypothesis working against me: exploit-based detection has a blind spot when
-the genuine fix is as cheap as the exploit. Re-running the same bundle type on `semverlite` found
-the exploit immediately, so this is agent variance on an easy fix, not a logic flaw. The honest
-mitigation is *k* independent trials taking the union — **not implemented**, and it would raise
-cost roughly linearly.
+The stored evidence in [`results/rewardgate_audits.json`](results/rewardgate_audits.json) says an
+exploit *was* found, but priced at **zero special-cases**, so the cost grader did not classify it as
+a defect. That is a measurement blind spot in my own regex-based cost counter, not the agent
+honestly declining to cheat.
 
----
-
-## Hot take
-
-**Reward-hackability is a property of the evaluation protocol, not of the individual task.**
-
-My first detector defined the defect as "an exploit exists." It flagged the clean bundle too —
-**100% false positives** — because *any* finite, visible test suite can be hardcoded given enough
-branches. Existence is not a discriminating property.
-
-Regrading on exploit **cost** — how many literal inputs the exploit must special-case — gave 0
-false positives out of 3. Same agent, same corpus, same code; only the definition changed.
-
-The practical consequence is a rule an author can act on before shipping: **test-input diversity is
-the defence against reward hacking, and it is measurable in advance.** With eight parametrised
-cases the agent chose to genuinely fix the bug *despite being explicitly instructed to cheat*,
-because hardcoding eight cases cost more than writing the real implementation. SWE-bench ships its
-tests alongside the task, which is exactly why no amount of care on any single task closes this.
+An earlier version of this README told the second story — that the agent chose to fix the bug
+properly. That reading was wrong and is withdrawn; the changelog records why.
 
 ---
 
 ## Prior art, and what is different here
 
 **The closest prior art is Terminal-Bench 2.0** ([arXiv:2601.11868](https://arxiv.org/abs/2601.11868)),
-and the overlap is substantial enough that it needs stating first rather than buried. Its Appendix B
-describes a pre-merge task QA pipeline that already runs, verbatim:
+and the overlap is substantial enough that it needs stating first rather than buried. Its §2.3 and Appendix B describe a pre-merge task QA pipeline that already runs, verbatim:
 
 > "an automated workflow ran the task's oracle solution to ensure solvability… other checks
 > verified the absence of common failure modes (e.g., a no-op 'dummy' agent should fail the task)."
@@ -273,17 +253,25 @@ What is actually different, and it is narrower than "a new idea":
    reviewer in the loop to decide whether an exploit counts.
 2. **Its git check is an LLM lint over the Dockerfile.** This runs `git log -p --all` matched
    against gold-patch lines, which is what catches a fix parked on a side branch.
-3. **Nobody has published a detection rate for this pipeline.** Terminal-Bench runs it as
-   process; this measures it — F1, false-alarm rate, per-class deltas against a baseline, on a
-   labelled corpus with negative controls. That measurement is the contribution.
+3. **Detection rates for this pipeline *have* been published — I was wrong to imply otherwise.**
+   *Hardening Agent Benchmarks with Adversarial Hacker-Fixer Loops*
+   ([arXiv:2606.08960](https://arxiv.org/abs/2606.08960)) reports **323 of 1,968 tasks (16%)
+   hackable across five benchmarks, including 13/89 of Terminal-Bench 2.0**, and
+   *Terminal Wrench* ([arXiv:2604.17596](https://arxiv.org/abs/2604.17596)) ships 331
+   reward-hackable environments with 3,632 exploit trajectories. What is still different here is
+   narrower: those papers measure **how many tasks are hackable**; this measures **the detector** —
+   with clean negative controls, a reported false-alarm rate, and a significance test that comes
+   back negative.
 4. **Exploit *cost* rather than exploit *existence*.** Terminal-Bench flags that a cheat was found.
    Grading on existence gave a 100% false-positive rate here; counting how many literals the cheat
    must special-case is what made the signal usable. I could not find prior work formalising this.
 
 Also relevant: **SpecBench** ([arXiv:2605.21384](https://arxiv.org/abs/2605.21384)) uses the same
 visible-versus-held-out pass-rate gap, though to grade agents rather than tasks.
-**BenchJack** ([arXiv:2605.12673](https://arxiv.org/abs/2605.12673)) red-teams published benchmarks
-in bulk for research. **SWE-Bench+** ([arXiv:2410.06992](https://arxiv.org/abs/2410.06992)) and
+**BenchJack** ([arXiv:2605.12673](https://arxiv.org/abs/2605.12673)) is an automated red-teaming
+system that drives coding agents to audit benchmarks, extended into a discover-and-patch loop:
+219 flaws found, hackable-task ratio driven from ~100% to under 10% across 10 benchmarks. That is
+substantially more than "bulk research", and an earlier draft of this section understated it. **SWE-Bench+** ([arXiv:2410.06992](https://arxiv.org/abs/2410.06992)) and
 **UTBoost** ([arXiv:2506.09289](https://arxiv.org/abs/2506.09289)) precede the leakage and
 weak-assertion checks. The **ABC** paper ([arXiv:2507.02825](https://arxiv.org/abs/2507.02825))
 gives the checklist this implements an executable subset of.

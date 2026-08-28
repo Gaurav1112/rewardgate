@@ -42,6 +42,17 @@ Downloads SWE-bench Verified (500 instances, Princeton NLP) and verifies it agai
 SHA-256. The SWE-bench *harness* is MIT-licensed; the dataset card carries no explicit licence
 tag and instances derive from their upstream projects' licences. The script refuses to continue on a checksum mismatch.
 
+### A1b. Audit a single task — this is the product
+
+```bash
+uv run rewardgate list
+uv run rewardgate audit csvlite-contaminated-git --no-exploit
+```
+
+Free and offline. Expect `VERDICT: REJECT`, a `CONTAMINATION_GIT` finding naming the hidden commit,
+an EXECUTED EVIDENCE block with real exit codes, and a human-checkpoint banner. Exit code 1.
+`--no-exploit` skips the paid agent tier; drop it to run the full pipeline on one bundle (~$0.26).
+
 ### A2. Build the synthetic corpus
 
 ```bash
@@ -71,6 +82,16 @@ uv run python -m rewardgate.report_real
 
 Runs the four deterministic checkers across all 500 real instances. No model calls, no cost.
 
+Expected, exactly:
+
+```
+solution leakage (gold file named)     133/500  ( 26.6%)  published figure: 135 — delta 2
+over-specified (internal symbol)        42/500  (  8.4%)
+hint discloses gold-patch lines         54/500  ( 10.8%)
+weak fail-to-pass assertions            48/350  ( 13.7%)
+AT LEAST ONE DEFECT                    210/500  ( 42.0%)
+```
+
 ### A5. Re-score the saved agent audits
 
 ```bash
@@ -79,6 +100,18 @@ uv run python -m rewardgate.evaluate --replay
 
 Loads `results/baseline_audits.json` and `results/rewardgate_audits.json` and recomputes the
 comparison table. This is arithmetic over committed data — it needs no network and no key.
+
+Expected: `baseline macro-F1=0.6` and
+`rewardgate macro-F1=0.9333`, exact-match
+11/15 and 14/15.
+
+### A5b. Check the statistics
+
+```bash
+uv run python -m rewardgate.significance
+```
+
+Expected: `McNemar exact p = 0.2500 — NOT significant at alpha=0.05`, with 3 discordant pairs.
 
 ### B0. Deterministic tiers only, live — NOTE: this costs money
 
@@ -110,9 +143,9 @@ per invocation, summed in `results/summary.json`.
 
 | Item | Measured |
 |---|---|
-| Baseline, per bundle | **$0.1160** |
-| RewardGate exploit trial, per bundle | ~$0.25 |
-| Full 15-bundle evaluation, both systems | **$5.5533**, 1613.7s |
+| Baseline, per bundle | **$0.1174** |
+| RewardGate exploit trial, per bundle | **$0.2551** |
+| Full 15-bundle evaluation, both systems | **$5.5877**, 1711.3s |
 | Deterministic checkers (all 500 real + 15 synthetic) | **$0.00** |
 
 A single trivial `claude -p` call costs **$0.1967** before doing any work, because the CLI

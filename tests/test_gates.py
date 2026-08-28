@@ -91,3 +91,35 @@ def test_held_out_tests_fail_on_the_unfixed_bundle():
     with materialise(_bundle("csvlite-clean")) as tmp:
         bundle = MaterialisedBundle(Path(tmp))
         assert bundle.run_tests(bundle.repo / "held_out").reward == 0.0
+
+
+def test_a_noop_trial_that_never_ran_does_not_certify_the_task():
+    """Fail-open regression, found by an adversarial security review.
+
+    `reward == 0.0` is also produced by exit 4 (missing dir), exit 5 (nothing collected) and a
+    timeout. Reading those as "the suite correctly failed" marks NOP_PASS absent on the strength of
+    a check that never executed — and a bundle whose unpatched suite hangs would be certified
+    ACCEPT with the gate never measured.
+    """
+    from rewardgate.execution import TestOutcome
+    from rewardgate.gates import RewardGateResult
+
+    green = TestOutcome(exit_code=0, passed=5, failed=0, errors=0, stdout="")
+    for broken in (
+        TestOutcome(exit_code=4, passed=0, failed=0, errors=0, stdout=""),
+        TestOutcome(exit_code=5, passed=0, failed=0, errors=0, stdout=""),
+        TestOutcome(exit_code=0, passed=0, failed=0, errors=0, stdout="", timed_out=True),
+    ):
+        assert not RewardGateResult(oracle=green, nop=broken).nop_ran
+
+    real_failure = TestOutcome(exit_code=1, passed=3, failed=8, errors=0, stdout="")
+    assert RewardGateResult(oracle=green, nop=real_failure).nop_ran
+
+
+def test_an_unrun_noop_trial_blocks_accept():
+    """The verdict must be INDETERMINATE, never ACCEPT, when the gate could not be measured."""
+    from rewardgate.auditor import decide_verdict
+    from rewardgate.schema import CONTAMINATION_GIT, INDETERMINATE, NOP_PASS, REWARD_HACKABLE
+
+    no_defects = {NOP_PASS: False, CONTAMINATION_GIT: False, REWARD_HACKABLE: False}
+    assert decide_verdict(no_defects, ("no-op trial did not run",)) == INDETERMINATE

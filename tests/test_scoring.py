@@ -110,7 +110,7 @@ def test_a_perfect_system_scores_one_and_a_silent_one_scores_zero():
 
 
 def test_always_yes_predictor_scores_the_documented_floor():
-    """macro-F1's floor is not zero. Reported so 0.524 is read against the right baseline."""
+    """macro-F1's floor is not zero. Reported so 0.600 is read against the right baseline."""
     truth = {f"b{i}": ([NOP_PASS] if i < 3 else []) for i in range(15)}
     always_yes = [_audit(b, *DEFECT_CLASSES) for b in truth]
     score = score_audits("always-yes", always_yes, truth)

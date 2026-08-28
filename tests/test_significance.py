@@ -100,7 +100,7 @@ def test_pairing_classifies_each_judgement():
 
 
 def test_always_yes_floor_is_not_zero():
-    """macro-F1 has a non-zero floor, so a reported 0.524 must be read against it."""
+    """macro-F1 has a non-zero floor, so a reported 0.600 must be read against it."""
     truth = {f"b{i}": ([NOP_PASS] if i < 3 else []) for i in range(15)}
     floors = degenerate_baselines(truth)
     assert floors["always_no"] == 0.0

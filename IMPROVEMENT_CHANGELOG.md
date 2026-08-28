@@ -202,11 +202,11 @@ flowed through it — I had tested the checkers and the scorer, and never the pa
 
 | | claimed (buggy) | measured (fixed) |
 |---|---:|---:|
-| baseline macro-F1 | 0.400 | **0.524** |
-| baseline precision | 0.250 | **0.500** |
+| baseline macro-F1 | 0.400 | **0.600** |
+| baseline precision | 0.250 | **0.667** |
 | baseline recall | 1.000 | **0.556** |
-| baseline exact-match | 0/12 | **9/15** |
-| improvement | +133.3% | **+78.2%** |
+| baseline exact-match | 0/12 | **11/15** |
+| improvement | +133.3% | **+55.6%** (absolute Δ +0.333) |
 
 **Decision.** Claim withdrawn, narrative rewritten, 11 tests added to `schema.py` (30 parametrised cases). The real
 baseline is a competent opponent that ties on `NOP_PASS` and fails only where execution is

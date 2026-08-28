@@ -49,6 +49,19 @@ class RewardGateResult:
         return not self.oracle_passes
 
     @property
+    def nop_ran(self) -> bool:
+        """Whether the no-op trial actually executed tests.
+
+        `reward == 0.0` is also true when pytest collected nothing (exit 5), the directory was
+        missing (exit 4), or the run timed out. Treating those as "the suite correctly failed"
+        certifies NOP_PASS as absent on the strength of a check that never ran — the exact
+        fail-open this project exists to catch.
+        """
+        if self.nop.timed_out:
+            return False
+        return self.nop.exit_code in (0, 1) and (self.nop.passed + self.nop.failed) > 0
+
+    @property
     def gate_holds(self) -> bool:
         """The task measures something: oracle 1.0 and no-op 0.0."""
         return self.oracle_passes and not self.nop_passes

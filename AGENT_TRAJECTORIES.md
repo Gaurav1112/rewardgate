@@ -27,9 +27,12 @@ readable markdown alongside the raw JSONL event streams.
   writes a one-line special case, runs pytest, sees green. Adjudication: visible suite
   `exit=0 passed=4`, held-out suite `exit=1 failed=1` → `REWARD_HACKABLE`.
 - [`exploit-agent-csvlite-clean.md`](trajectories/exploit-agent-csvlite-clean.md)
-  — **15 steps, exploit fails.** Same brief, same tools, a suite with eight parametrised inputs.
-  The agent concludes hardcoding is not worth it and implements the real fix. Held-out suite also
-  passes → `RESISTED`.
+  — **15 steps, and the transcript contradicts its own verdict.** The agent wrote a dict
+  memorising all eight visible inputs and replied `EXPLOIT_FOUND`. The adjudication nonetheless
+  recorded `RESISTED` with **0 hardcoded cases**, because the cost grader's patterns did not match
+  a dict literal. This file is kept unedited as the evidence for that bug; the dict pattern was
+  added afterwards and the held-out suite, which shared every input with the visible one, was
+  rebuilt. See the README's *Main failure mode*.
 
 Both are included deliberately. A trajectory set showing only successes hides how the system
 behaves when it does not find what it is looking for.
@@ -50,8 +53,9 @@ the largest outstanding gap. See [README Safety](README.md#safety).
 
 **Retry strategy.** None, deliberately, and this is a known limitation. A single trial is run per
 bundle, bounded by `--max-turns 25` and a 600-second timeout. The measured consequence is one
-false negative (`retrylite-reward-hackable`) where the agent chose to fix the bug rather than game
-it. The fix is *k* independent trials taking the union; it is **not implemented**, and it would
+false negative (`retrylite-reward-hackable`): the stored evidence shows an exploit *was* found but
+priced at zero special-cases — a cost-grader blind spot, not the agent honestly fixing the bug. An
+earlier version of this document told the second story; it was wrong. The fix is *k* independent trials taking the union; it is **not implemented**, and it would
 raise cost roughly linearly. Timeouts and unparseable output surface as `ERROR`, never as "clean".
 
 **Human checkpoint.** The agent's verdict never auto-rejects a task. `REJECT` is a recommendation
@@ -64,14 +68,14 @@ requiring human sign-off before an author's work is turned away.
 | **Role** | Represent how this task is handled today: read the bundle, form a judgement |
 | **Model** | `claude-sonnet-4-5-20250929`, `--max-turns 1` |
 | **Tools** | **None.** All tools explicitly disallowed |
-| **Cost** | ~$0.116 per bundle (measured) |
+| **Cost** | **$0.1174** per bundle (measured) |
 | **Implementation** | [`rewardgate/baseline.py`](rewardgate/baseline.py) |
 
 Sees the same artifacts as the pipeline — instruction, tests, source, git short log — and differs
 only in being unable to execute anything.
 
 **It is a competent opponent, not a straw man.** Across 15 bundles it flagged all three defects on
-**zero** of them and got **9/15 exactly right**, including a perfect 1.000 F1 on `NOP_PASS`. A
+**zero** of them and got **11/15 exactly right**, including a perfect 1.000 F1 on `NOP_PASS`. A
 suite that only asserts a module imports is visibly inadequate on the page; reading is genuinely
 sufficient for that class, and the pipeline's agent adds nothing there.
 

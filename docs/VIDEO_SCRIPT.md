@@ -25,7 +25,7 @@ Target 4:50, leaving margin under the 5:00 limit. Screen recording with voice-ov
 
 **Screen:** `results/baseline_audits.json`, then the score line.
 
-> "Macro-F1 zero-point-five-two-four. Nine out of fifteen exactly right. This is not a straw man —
+> "Macro-F1 zero-point-six-zero-zero. Eleven out of fifteen exactly right. This is not a straw man —
 > a careful reader solves much of this. Look at the per-class row: on NOP_PASS it scores a perfect
 > one-point-zero, same as my system. A test that only asserts a module imports is visibly
 > inadequate on the page."
@@ -71,13 +71,17 @@ return row.split(",")
 
 **Screen:** the comparison table.
 
-> "Same fifteen tasks, same schema, same scorer. Macro-F1 zero-point-five-two-four to
-> zero-point-nine-three-three — up seventy-eight percent. Exact-match nine of fifteen to fourteen
-> of fifteen. Five dollars fifty-five for the whole run."
+> "Same fifteen tasks, same schema, same scorer. Macro-F1 zero-point-six to zero-point-nine-three-three. I'm giving the absolute delta, plus
+> zero-point-three-three, because percentage change off a zero denominator manufactures magnitude.
+> Exact-match eleven of fifteen to fourteen of fifteen. Five dollars fifty-nine for the whole run."
 
-> "And where it comes from matters more than the headline. NOP_PASS is a tie. The entire gap is
-> contamination, zero to one, and reward hacking. My system wins exactly where a verdict needs a
-> command run, and nowhere else. It also costs a hundred and nineteen percent more per task."
+> "And where it comes from matters more than the headline, because it is not flattering. NOP_PASS
+> is a tie at one-point-zero. REWARD_HACKABLE is ALSO a tie, at zero-point-eight — my agent does not
+> beat a careful reader at the one thing it exists to do. Every judgement separating the two systems
+> is contamination, zero to one. Drop that class and both score zero-point-nine exactly."
+
+> "McNemar p equals zero-point-two-five. Three discordant pairs. Not significant. And it costs a
+> hundred and seventeen percent more per task."
 
 ---
 
@@ -96,7 +100,7 @@ return row.split(",")
 > flagged everything. That was my bug. `bool` of the string `false` is `True` in Python, and my own
 > prompt asked for a string. Every negative verdict inverted before scoring. The model was right;
 > my parser wasn't. An adversarial audit caught it, I fixed it, re-ran, and the improvement dropped
-> from a hundred and thirty-three percent to seventy-eight."
+> from a hundred and thirty-three percent to fifty-six."
 
 > "This project exists to catch results that pass every check while measuring nothing. I produced
 > one about my own work."

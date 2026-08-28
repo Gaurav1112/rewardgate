@@ -8,7 +8,7 @@ its own, evidence. This module computes the things that decide whether the diffe
 * **Clopper-Pearson intervals** for the rates, which are exact rather than normal-approximate and
   so stay honest at n=3.
 * **Degenerate baselines** — always-yes, always-no — because macro-F1's floor is not zero, and a
-  reader who does not know that will over-read 0.524.
+  reader who does not know that will over-read 0.600.
 * **Drop-one-class analysis** — which class actually carries the headline.
 
 Everything is stdlib. Nothing here depends on the result coming out favourably.
@@ -126,7 +126,7 @@ def pair_up(baseline: list[Audit], rewardgate: list[Audit], truth: dict[str, lis
 
 
 def degenerate_baselines(truth: dict[str, list[str]]) -> dict[str, float]:
-    """macro-F1 for always-yes and always-no, so 0.524 is read against the right floor."""
+    """macro-F1 for always-yes and always-no, so 0.600 is read against the right floor."""
     always_yes = [
         Audit(bundle_id=b, defects={d: True for d in DEFECT_CLASSES}) for b in truth
     ]

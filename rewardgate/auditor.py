@@ -101,6 +101,8 @@ def audit_bundle(
     blockers: list[str] = []
     if gate.patch_error:
         blockers.append(f"gold patch did not apply: {gate.patch_error}")
+    elif not gate.nop_ran:
+        blockers.append(f"no-op trial did not run ({gate.nop.summary}); NOP_PASS unverified")
     elif gate.is_unsolvable_defect:
         blockers.append(f"gold patch does not make the suite pass ({gate.oracle.summary})")
     if getattr(contamination, "indeterminate", False):
