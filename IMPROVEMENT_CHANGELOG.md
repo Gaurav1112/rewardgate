@@ -206,6 +206,45 @@ refute a claim is worth more than any amount of careful hedging around it.
 
 ---
 
+## Iteration 5 — the tool was unusable on anything but its own corpus
+
+**What I tried and why.** A reviewer asked the obvious question I had never tested: what happens
+if you point `rewardgate audit` at a directory that is not a bundle? The answer was a full,
+confident-looking report — every trial at `exit=4`, a blocker reading *"no-op trial did not run"*,
+and exit code 1. The real cause, "there is no test suite and no gold patch here", appeared nowhere
+in the output. And exit 1 is the same code a proven `REJECT` returns.
+
+**Evidence.** Two distinct defects, both mine:
+
+1. **No stated contract.** The bundle format existed only as an example directory. There was no
+   document telling anyone which files are required, which are optional, or — the load-bearing one
+   — that `held_out/` must share no inputs with `tests/`. A user reproducing the layout by eye
+   would very plausibly have reused inputs, which is exactly the mistake I made and had to fix in
+   iteration 3. The rule was enforced by a test on *my* corpus and by nothing at all on theirs.
+2. **`INDETERMINATE` and `REJECT` shared exit code 1.** A CI job gating on non-zero would treat
+   "this task is broken, reject it" and "my harness could not run, fix it and re-run" as the same
+   event. The whole point of introducing `INDETERMINATE` was that those are different claims; the
+   exit code threw the distinction away at the boundary where it mattered most.
+
+**Decision.** Added `docs/BUNDLE_FORMAT.md` stating the contract, including the disjointness rule
+and what an `ACCEPT` does *not* cover. Added a preflight that names missing artifacts before
+anything executes, and split the exit codes: `0` ACCEPT, `1` defect proven, `2` usage, `3`
+INDETERMINATE. A test now asserts every shipped bundle satisfies the documented contract, so the
+document and the corpus cannot drift apart.
+
+Writing the document also caught a factual error I had been repeating: I described the visible
+`csvlite` suite as having 17 cases. It has 8 quoted-field cases across 11 collected tests. The
+number matters, because it is the quantity the hardcoding-cost argument rests on.
+
+**Learning.** The failure here is narrower than "missing docs". Every safety property of this
+project is enforced by a test over the 15 bundles I built. Point it at a sixteenth and the
+enforcement is gone, silently — the audit still returns ACCEPT, in the same format, with the same
+authority. **A tool whose invariants are checked by its own test suite rather than by its own code
+is trustworthy only on the inputs its author already thought of.** Documenting the contract does
+not fix that; it just stops the tool from being confidently wrong without saying so.
+
+---
+
 ## Withdrawn — a finding that was my own bug
 
 **What I claimed.** That the baseline was an indiscriminate flag-everything system: precision

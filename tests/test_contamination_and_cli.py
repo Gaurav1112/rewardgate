@@ -12,7 +12,15 @@ from pathlib import Path
 import pytest
 
 from rewardgate.checkers.contamination import detect_git_contamination
-from rewardgate.cli import main
+from rewardgate.cli import (
+    DEFAULT_BUNDLES,
+    EXIT_ACCEPT,
+    EXIT_DEFECT,
+    EXIT_INDETERMINATE,
+    EXIT_USAGE,
+    main,
+    missing_artifacts,
+)
 from rewardgate.gates import read_patch
 
 BUNDLES = Path(__file__).resolve().parent.parent / "corpus" / "synthetic" / "bundles"
@@ -102,3 +110,38 @@ def test_cli_report_cites_verifiable_commands(capsys):
 def test_cli_unknown_bundle_exits_with_an_error(capsys):
     assert main(["audit", "does-not-exist", "--no-exploit"]) == 2
     assert "no such bundle" in capsys.readouterr().err
+
+
+# --- the bundle contract --------------------------------------------------------------
+
+
+def test_a_directory_that_is_not_a_bundle_is_refused_by_name(tmp_path, capsys):
+    """Before this check, auditing an arbitrary directory printed a full report of exit-4 trials
+    and blamed the no-op gate. The actual cause — no test suite, no gold patch — appeared nowhere.
+    """
+    (tmp_path / "src").mkdir()
+    assert main(["audit", str(tmp_path), "--no-exploit"]) == EXIT_INDETERMINATE
+    err = capsys.readouterr().err
+    assert "tests" in err and "solution.patch" in err
+    assert "No verdict is claimed" in err
+
+
+def test_held_out_is_required_only_when_the_exploit_trial_will_run(tmp_path):
+    """`--no-exploit` is the offline mode a judge runs without an API key, so demanding the
+    adjudicating suite there would refuse bundles the deterministic tiers can audit fine."""
+    (tmp_path / "tests").mkdir()
+    (tmp_path / "solution.patch").write_text("")
+    assert missing_artifacts(tmp_path, need_exploit=False) == {}
+    assert set(missing_artifacts(tmp_path, need_exploit=True)) == {"held_out"}
+
+
+def test_every_corpus_bundle_satisfies_the_documented_contract():
+    """The contract is only worth documenting if the shipped corpus actually meets it."""
+    for bundle in sorted(p for p in DEFAULT_BUNDLES.iterdir() if p.is_dir()):
+        assert missing_artifacts(bundle) == {}, bundle.name
+
+
+def test_indeterminate_and_reject_do_not_share_an_exit_code():
+    """A CI job gating on 'not zero' would otherwise treat 'this task is broken' and 'I could not
+    check this task' identically, though they call for opposite responses."""
+    assert EXIT_INDETERMINATE not in (EXIT_ACCEPT, EXIT_DEFECT, EXIT_USAGE)

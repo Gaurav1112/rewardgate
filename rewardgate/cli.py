@@ -20,8 +20,10 @@ from rewardgate.schema import (
     ACCEPT,
     CONTAMINATION_GIT,
     DEFECT_DESCRIPTIONS,
+    INDETERMINATE,
     NOP_PASS,
     REJECT,
+    REVISE,
     REWARD_HACKABLE,
     Audit,
 )
@@ -29,11 +31,41 @@ from rewardgate.schema import (
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_BUNDLES = ROOT / "corpus" / "synthetic" / "bundles"
 
+# Exit codes. INDETERMINATE gets its own code because a CI job that gates on "not zero" would
+# otherwise treat "this task is broken" and "I could not check this task" as the same event. They
+# call for opposite responses: reject the task, versus fix the harness and re-run.
+EXIT_ACCEPT = 0
+EXIT_DEFECT = 1
+EXIT_USAGE = 2
+EXIT_INDETERMINATE = 3
+
+# The bundle contract, documented in docs/BUNDLE_FORMAT.md. Each value says what silently degrades
+# when the artifact is absent — in every case the check stops running but keeps reporting "no
+# defect found", which is the precise failure mode this project exists to catch.
+REQUIRED_ARTIFACTS = {
+    "tests": "the fail-to-pass suite; without it both reward-gate trials collect nothing (pytest exit 4)",
+    "solution.patch": "the gold fix; without it the oracle trial is identical to the no-op trial",
+}
+EXPLOIT_ARTIFACTS = {
+    "held_out": "the adjudicating suite; without it an exploit cannot be distinguished from a real fix",
+}
+
+
+def missing_artifacts(bundle_dir: Path, need_exploit: bool = True) -> dict[str, str]:
+    """Return the required artifacts absent from `bundle_dir`, mapped to what they cost.
+
+    Checked before running rather than after, because an audit of a directory that is not a bundle
+    produces a report full of exit-4 trials whose real cause — "there is no test suite here" — is
+    nowhere in the output.
+    """
+    contract = {**REQUIRED_ARTIFACTS, **(EXPLOIT_ARTIFACTS if need_exploit else {})}
+    return {name: why for name, why in contract.items() if not (bundle_dir / name).exists()}
+
 VERDICT_STYLE = {
     ACCEPT: ("ACCEPT", "the reward gate holds and no defect was proven"),
-    "REVISE": ("REVISE", "repairable — the task measures something, but weakly"),
+    REVISE: ("REVISE", "repairable — the task measures something, but weakly"),
     REJECT: ("REJECT", "the task cannot measure what it claims"),
-    "INDETERMINATE": ("INDETERMINATE", "a check could not run — no verdict is claimed"),
+    INDETERMINATE: ("INDETERMINATE", "a check could not run — no verdict is claimed"),
 }
 
 
@@ -133,15 +165,24 @@ def cmd_audit(args: argparse.Namespace) -> int:
         if not candidate.exists():
             print(f"error: no such bundle: {args.bundle}", file=sys.stderr)
             print(f"       looked in {bundle_dir} and {candidate}", file=sys.stderr)
-            return 2
+            return EXIT_USAGE
         bundle_dir = candidate
+
+    absent = missing_artifacts(bundle_dir, need_exploit=not args.no_exploit)
+    if absent:
+        print(f"error: {bundle_dir} is missing artifacts the audit depends on:", file=sys.stderr)
+        for name, why in absent.items():
+            print(f"       {name:<16} {why}", file=sys.stderr)
+        print("       see docs/BUNDLE_FORMAT.md. No verdict is claimed.", file=sys.stderr)
+        return EXIT_INDETERMINATE
 
     audit, trace = audit_bundle(bundle_dir, run_exploit=not args.no_exploit)
     print(render_report(audit, trace, bundle_dir))
     if audit.error:
         print(f"  BLOCKED: {audit.error}\n")
-    # Non-zero exit on a defect, so this can gate a CI pipeline.
-    return 0 if audit.verdict == ACCEPT else 1
+    if audit.verdict == ACCEPT:
+        return EXIT_ACCEPT
+    return EXIT_INDETERMINATE if audit.verdict == INDETERMINATE else EXIT_DEFECT
 
 
 def cmd_list(_args: argparse.Namespace) -> int:

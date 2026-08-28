@@ -364,11 +364,20 @@ uv run python -m rewardgate.report_real # third-party findings, $0.00
 uv run python -m rewardgate.evaluate --replay   # re-score saved audits offline, $0.00
 ```
 
+To audit a task of your own rather than one from this corpus, the required layout is in
+[docs/BUNDLE_FORMAT.md](docs/BUNDLE_FORMAT.md):
+
+```bash
+uv run rewardgate audit path/to/my-task --no-exploit
+# exit 0 = ACCEPT, 1 = defect proven, 3 = a check could not run and no verdict is claimed
+```
+
 ## Documents
 
 - [IMPROVEMENT_CHANGELOG.md](IMPROVEMENT_CHANGELOG.md) — what changed, why, and what was removed
 - [REPRODUCTION.md](REPRODUCTION.md) — clean-environment setup, measured cost and runtime
 - [AGENT_TRAJECTORIES.md](AGENT_TRAJECTORIES.md) — every agent, end to end
+- [docs/BUNDLE_FORMAT.md](docs/BUNDLE_FORMAT.md) — the bundle contract, for auditing your own tasks
 - [docs/specs/](docs/specs/) — design specification
 
 ## Provenance
