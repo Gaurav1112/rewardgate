@@ -114,7 +114,14 @@ def detect_git_contamination(bundle_dir: Path, solution_patch: str) -> Contamina
 
     solution_lines = _significant_solution_lines(solution_patch)
     if not solution_lines:
-        return ContaminationFinding(has_git=True)
+        # No fingerprint, so history cannot be searched — which is not the same as searching it
+        # and finding nothing. This is reachable for real fixes: a deletion-only patch (removing a
+        # stray `break`) adds no lines at all, and a missing `solution.patch` arrives here as the
+        # empty string. Both used to report "contains no gold-patch lines" and clear the bundle.
+        return ContaminationFinding(
+            has_git=True,
+            error="gold patch adds no line distinctive enough to fingerprint (deletion-only, or absent)",
+        )
 
     def added_lines_in(args: list[str]) -> set[str]:
         return {

@@ -8,6 +8,7 @@ These are not feature tests. They pin the properties the project's claims depend
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -111,6 +112,40 @@ def test_an_exploit_whose_technique_is_unrecognised_is_reported_as_unpriced():
     assert "not be priced" in result.reason or "not measurable" in result.verdict
 
 
+# --- the harness must not inherit the operator's environment --------------------------
+
+@pytest.mark.parametrize(
+    "hostile", ["FORCE_COLOR", "PY_COLORS", "PYTEST_ADDOPTS", "PYTEST_PLUGINS", "PYTHONHASHSEED"]
+)
+def test_variables_that_would_corrupt_the_measurement_are_stripped(hostile, tmp_path):
+    """Counts are scraped from pytest's summary line, so `FORCE_COLOR=1` wraps them in ANSI and
+    every trial parses as `passed=0 failed=0` — indistinguishable from "collected nothing".
+    `PYTEST_ADDOPTS` is worse: `-k nomatch` makes a suite pass by running nothing.
+
+    An adversarial review reproduced a whole-corpus flip (REJECT -> INDETERMINATE) from a single
+    exported variable, with nothing in the output disclosing why.
+    """
+    from rewardgate.execution import MaterialisedBundle
+
+    bundle = MaterialisedBundle(tmp_path)
+    os.environ[hostile] = "1"
+    try:
+        assert hostile not in bundle._test_env()
+    finally:
+        os.environ.pop(hostile, None)
+
+
+def test_pythonpath_is_set_outright_not_prepended(tmp_path):
+    """A same-named module on the operator's PYTHONPATH would otherwise shadow the bundle's."""
+    from rewardgate.execution import MaterialisedBundle
+
+    os.environ["PYTHONPATH"] = "/somewhere/else"
+    try:
+        assert MaterialisedBundle(tmp_path)._test_env()["PYTHONPATH"] == str(tmp_path / "repo" / "src")
+    finally:
+        os.environ.pop("PYTHONPATH", None)
+
+
 # --- contamination must not fail silently (mutant: swallow GitCommandError) ------------
 
 def test_an_unreadable_git_repo_is_indeterminate_not_clean(tmp_path):
@@ -142,4 +177,22 @@ def test_a_gold_patch_with_no_distinctive_line_is_not_silently_clean(tmp_path):
 
     trivial = "diff --git a/a.py b/a.py\n--- a/a.py\n+++ b/a.py\n@@ -1 +1 @@\n+x = 2\n"
     finding = detect_git_contamination(bundle, trivial)
+    assert not finding.contaminated
+    assert finding.indeterminate, "no fingerprint is not the same as searched-and-found-nothing"
+
+
+def test_a_deletion_only_gold_patch_is_indeterminate_not_clean(tmp_path):
+    """Removing a stray `break` is an ordinary bug fix and adds no lines at all, so there is
+    nothing to search history for. Reported as clean, that is a false negative on a real shape."""
+    from rewardgate.checkers.contamination import detect_git_contamination
+
+    bundle = tmp_path / "b"
+    bundle.mkdir()
+    subprocess.run(["git", "init", "-q"], cwd=bundle, check=False, capture_output=True)
+    deletion_only = (
+        "diff --git a/a.py b/a.py\n--- a/a.py\n+++ b/a.py\n@@ -3,2 +3 @@\n"
+        "     for candidate in items:\n-        break\n"
+    )
+    finding = detect_git_contamination(bundle, deletion_only)
+    assert finding.indeterminate
     assert not finding.contaminated

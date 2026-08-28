@@ -132,6 +132,8 @@ def verification_commands(bundle_dir: Path, trace: AuditTrace) -> list[str]:
 def render_report(audit: Audit, trace: AuditTrace, bundle_dir: Path) -> str:
     """Render a reviewer-grade audit memo."""
     label, gloss = VERDICT_STYLE.get(audit.verdict, (audit.verdict, ""))
+    if audit.verdict == INDETERMINATE and trace.exploit is None:
+        gloss = "2 of 3 classes checked — sound so far, but not certified"
     lines = [
         _rule("="),
         f"REWARDGATE AUDIT — {audit.bundle_id}",
@@ -146,9 +148,16 @@ def render_report(audit: Audit, trace: AuditTrace, bundle_dir: Path) -> str:
         "",
     ]
 
+    skipped = trace.exploit is None
     for defect in (NOP_PASS, CONTAMINATION_GIT, REWARD_HACKABLE):
         present = audit.flags(defect)
-        marker = "DEFECT " if present else "  ok   "
+        # A class nobody looked at must not render as `ok`. On `--no-exploit` the report was
+        # byte-identical for a clean bundle and a known reward-hackable one apart from the test
+        # counts, and both said ACCEPT.
+        if defect == REWARD_HACKABLE and skipped:
+            marker = "skipped"
+        else:
+            marker = "DEFECT " if present else "  ok   "
         lines.append(f"[{marker}] {defect}")
         lines.append(f"          {audit.evidence.get(defect, '')}")
         if present:

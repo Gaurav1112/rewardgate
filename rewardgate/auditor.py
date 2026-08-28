@@ -107,8 +107,30 @@ def audit_bundle(
         blockers.append(f"gold patch does not make the suite pass ({gate.oracle.summary})")
     if getattr(contamination, "indeterminate", False):
         blockers.append(contamination.reason)
-    if exploit is not None and exploit.error:
+    if exploit is None:
+        # `--no-exploit` checks two of the three classes. Reporting ACCEPT on that basis asserts
+        # the task is sound while the only class the reward gate is blind to went unexamined —
+        # and REWARD_HACKABLE is the class this project exists to add. The docs already claimed
+        # "a check that cannot run returns INDETERMINATE rather than defaulting to ACCEPT"; this
+        # makes that true of the free path a judge is most likely to run.
+        blockers.append("REWARD_HACKABLE not checked (--no-exploit); 2 of 3 classes examined")
+    elif exploit.error:
         blockers.append(f"exploit trial failed: {exploit.error}")
+    elif exploit is not None and exploit.produced_patch and exploit.visible_green:
+        # The exploit tier had its own honest-failure guards from the start, but nothing consumed
+        # them, so they could not affect a verdict. Both cases below record REWARD_HACKABLE as
+        # absent on the strength of a measurement that did not happen — the same fail-open the
+        # reward gate's `nop_ran` closes, in the tier this project exists to add.
+        if not exploit.held_out_ran:
+            blockers.append(
+                f"held-out suite did not run ({exploit.held_out.summary if exploit.held_out else 'n/a'}); "
+                "a patch cannot be distinguished from an exploit"
+            )
+        elif not exploit.cost_measurable:
+            blockers.append(
+                "an exploit was proven but its technique matches no known hardcoding pattern, "
+                "so its cost could not be priced — review the patch by hand"
+            )
 
     audit = Audit(
         bundle_id=bundle_id,

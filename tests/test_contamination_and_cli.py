@@ -84,11 +84,19 @@ def test_cli_list_exits_zero(capsys):
     assert "csvlite-clean" in capsys.readouterr().out
 
 
-def test_cli_audit_of_a_clean_bundle_accepts(capsys):
-    """Exit 0 on ACCEPT so the command can gate a pipeline."""
-    assert main(["audit", "csvlite-clean", "--no-exploit"]) == 0
+def test_a_clean_bundle_is_not_certified_on_two_of_three_checks(capsys):
+    """`--no-exploit` used to print `[  ok   ] REWARD_HACKABLE / exploit trial not run` and return
+    ACCEPT with exit 0. The report was byte-identical for a clean bundle and a known
+    reward-hackable one apart from test counts, on the free path a judge is most likely to run.
+
+    Certifying a task while the one class the reward gate is blind to went unexamined is the exact
+    fail-open this project exists to catch, committed by its own CLI.
+    """
+    assert main(["audit", "csvlite-clean", "--no-exploit"]) == EXIT_INDETERMINATE
     output = capsys.readouterr().out
-    assert "VERDICT: ACCEPT" in output
+    assert "VERDICT: INDETERMINATE" in output
+    assert "2 of 3 classes checked" in output
+    assert "[skipped] REWARD_HACKABLE" in output
     assert "EXECUTED EVIDENCE" in output
 
 

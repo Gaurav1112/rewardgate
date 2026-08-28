@@ -116,9 +116,21 @@ class MaterialisedBundle:
         above confcutdir and it is silently never loaded.
         """
         env = os.environ.copy()
-        src = self.repo / "src"
-        existing = env.get("PYTHONPATH", "")
-        env["PYTHONPATH"] = f"{src}{os.pathsep}{existing}" if existing else str(src)
+        # Strip anything that changes pytest's output or selection. `_parse_pytest_counts` reads
+        # the human-readable summary line, so an ambient `FORCE_COLOR=1` — routine in CI and in
+        # some uv/npm shells — wraps the counts in ANSI escapes and every trial parses as
+        # `passed=0 failed=0`. That reads as "the suite collected nothing", every bundle becomes
+        # INDETERMINATE, and the published macro-F1 is unreproducible on the reviewer's machine
+        # for a reason nothing in the output discloses. `PYTEST_ADDOPTS` is worse: it can silently
+        # deselect tests, so a task's suite passes because it ran nothing.
+        for hostile in (
+            "FORCE_COLOR", "PY_COLORS", "NO_COLOR", "PYTEST_ADDOPTS", "PYTEST_PLUGINS",
+            "PYTHONHASHSEED", "PYTHONDONTWRITEBYTECODE", "PYTHONWARNINGS",
+        ):
+            env.pop(hostile, None)
+        # Set outright rather than prepending: the operator's PYTHONPATH could otherwise shadow
+        # the bundle's own `src` with a same-named module.
+        env["PYTHONPATH"] = str(self.repo / "src")
         return env
 
     def run_tests(self, test_dir: Path, timeout: int = DEFAULT_TIMEOUT_SECONDS) -> TestOutcome:
@@ -128,8 +140,10 @@ class MaterialisedBundle:
                 # sys.executable, not "python": an ambient interpreter without pytest would make
                 # every trial fail identically, which reads as "unsolvable task" rather than
                 # "broken harness".
+                # `--color=no` belt-and-braces alongside the env scrub: pytest also auto-enables
+                # colour from a tty, and the counts are parsed out of that line.
                 [sys.executable, "-m", "pytest", str(test_dir), "-q", "--no-header",
-                 "-p", "no:cacheprovider"],
+                 "--color=no", "-p", "no:cacheprovider", "-p", "no:randomly"],
                 self.repo,
                 timeout=timeout,
                 env=self._test_env(),
