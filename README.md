@@ -36,6 +36,42 @@ time burned.
 
 ---
 
+## Baseline solution and advanced solution
+
+The challenge asks for both, and for the advanced one to be a real improvement rather than a
+cosmetic variation. Here they are, named plainly.
+
+**Baseline solution — `rewardgate/baseline.py`.** One direct prompt with basic instructions and no
+tools. It is handed the instruction, the visible tests, the source and the git log, and asked for a
+verdict in the same schema the full pipeline emits. Run it with
+`uv run python -m rewardgate.evaluate --replay`.
+
+**Advanced solution — `rewardgate/auditor.py`.** Two deterministic checkers plus one adversarial
+agent, routing each defect class to the cheapest mechanism that can *prove* it. Run it with
+`uv run rewardgate audit <bundle>`.
+
+Both see the same bundles, emit the same schema, and are scored by the same function
+(`score_audits`). What differs, in the rules' own vocabulary:
+
+| Axis | What the advanced solution adds |
+|---|---|
+| **Capability** | It can *settle* `REWARD_HACKABLE`. The baseline can only form an opinion about it; the pipeline writes an exploit patch, runs it, and shows the visible suite green while the held-out suite is red. Under the fair (parity) comparison this is also the only class where the two differ: F1 **0.800** vs **0.667**. |
+| **Reliability** | Every positive verdict carries a mechanical artifact — an exit code, a commit SHA, an exploit patch. Nothing rests on a model's assertion, which matters given a measured **18.5% evaluator–human misalignment rate** in LLM-as-judge ([arXiv:2607.02577](https://arxiv.org/abs/2607.02577)). |
+| **Coverage** | Two of three classes are settled **deterministically at $0.00**, so they can run in CI on every task, not just on a sample. |
+| **Engineering quality** | A check that cannot run returns `INDETERMINATE`, never `ACCEPT` — including on `--no-exploit`, where only two of three classes are examined. 229 tests, exit codes that distinguish "broken" from "uncheckable", and a documented bundle contract. |
+
+**And the honest limit, stated here rather than buried.** On the primary metric the advantage is
+small: macro-F1 **0.933** against a fair baseline's **0.889** on 15 bundles, one discordant
+judgement, **McNemar exact p = 1.00**. The improvement above is real but it is in evidence quality
+and coverage, not in a headline score. The [ablation](#the-ablation-that-refutes-the-headline)
+that established this is mine, and it is reproducible for free in under a second.
+
+**Coding agents used.** Claude Code (Claude Opus 5) for implementation; the Claude Code CLI in
+headless mode is the adversarial exploit agent inside the product itself. Trajectories for both are
+in [AGENT_TRAJECTORIES.md](AGENT_TRAJECTORIES.md) and [`trajectories/`](trajectories/).
+
+---
+
 ## The core design decision
 
 > **Prove defects by execution, not by opinion.**
