@@ -132,10 +132,31 @@ def main() -> None:
     print(f"\nwall clock: {time.time() - started:.1f}s")
 
     if not args.replay:
+        elapsed = time.time() - started
+
+        def block(score: Score) -> dict:
+            return {
+                "macro_f1": round(score.macro_f1, 4),
+                "macro_precision": round(score.macro_precision, 4),
+                "macro_recall": round(score.macro_recall, 4),
+                "exact_match": score.exact_match,
+                "cost_usd": round(score.total_cost_usd, 4),
+                "cost_per_bundle_usd": round(score.cost_per_bundle, 4),
+                "errors": score.errors,
+            }
+
+        # Wall clock is persisted so the runtime quoted in the docs is checkable from an artifact
+        # rather than only from console output that scrolls away.
         summary = {
-            "baseline": {"macro_f1": baseline_score.macro_f1, "cost_usd": baseline_score.total_cost_usd},
-            "rewardgate": {"macro_f1": rewardgate_score.macro_f1, "cost_usd": rewardgate_score.total_cost_usd},
             "bundles": len(bundle_ids),
+            "defect_classes": len(DEFECT_CLASSES),
+            "judgements_per_system": len(bundle_ids) * len(DEFECT_CLASSES),
+            "wall_clock_seconds": round(elapsed, 1),
+            "total_cost_usd": round(
+                baseline_score.total_cost_usd + rewardgate_score.total_cost_usd, 4
+            ),
+            "baseline": block(baseline_score),
+            "rewardgate": block(rewardgate_score),
         }
         (RESULTS_DIR / "summary.json").write_text(json.dumps(summary, indent=2))
         print(f"saved -> {RESULTS_DIR}")

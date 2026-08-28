@@ -137,8 +137,22 @@ contradicted the implementation.
 | `trajectories/exploit-agent-csvlite-reward-hackable.jsonl` | Raw event stream |
 | `trajectories/exploit-agent-csvlite-clean.md` | Readable transcript, failed exploit |
 | `trajectories/exploit-agent-csvlite-clean.jsonl` | Raw event stream |
-| `results/baseline_audits.json` | All 12 baseline verdicts with evidence |
-| `results/rewardgate_audits.json` | All 12 pipeline verdicts with evidence |
-| `results/exploit_trials.json` | Exploit trials with cost, turns and adjudication |
+| `trajectories/baseline-csvlite-nop-pass.md` | Baseline: full prompt and raw response |
+| `results/baseline_audits.json` | Every baseline verdict, with evidence |
+| `results/rewardgate_audits.json` | Every pipeline verdict, with evidence |
+| `results/exploit_trials.json` | **Only the four `csvlite` control trials** from Iteration 3 — not the full corpus run |
+| `results/eval_run.log` | Console log of the evaluation that produced the headline table |
 
-Regenerate with `uv run python scripts/generate_trajectories.py` (~$0.52).
+Regenerate with `uv run python scripts/generate_trajectories.py` (~$0.65).
+
+### Two things to be transparent about
+
+**The saved transcripts come from a dedicated trajectory run, not from the evaluation that
+produced the headline table.** The evaluation stores verdicts and costs per bundle, not full event
+streams. The transcripts are the same agent, same brief, same bundles, produced by
+`scripts/generate_trajectories.py` — but they are a separate invocation, and because model
+sampling is not pinnable the exploit text may differ from the run that produced the table.
+
+**Transcripts exist for 3 bundles, not all of them.** Storing full event streams for every bundle
+on every run would add roughly 100 KB per trial to the repository. The three chosen cover the
+distinct outcomes: exploit succeeds, exploit fails, and the baseline's single-turn response.

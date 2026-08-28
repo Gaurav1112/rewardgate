@@ -90,23 +90,50 @@ RESPONSE_SCHEMA = {
 
 
 def schema_instructions() -> str:
-    """The output contract, identical for every system under evaluation."""
+    """The output contract, identical for every system under evaluation.
+
+    The `defects` values are shown as real JSON booleans. An earlier version showed the string
+    `"true|false"`, which asked the model for a string and got one — and `bool("false")` is `True`,
+    so every negative verdict was silently inverted. The example the prompt shows and the parser
+    that reads the reply have to agree on the type.
+    """
+    example = json.dumps(
+        {
+            "defects": {d: False for d in DEFECT_CLASSES},
+            "evidence": {d: "one sentence citing what you observed" for d in DEFECT_CLASSES},
+            "verdict": ACCEPT,
+        },
+        indent=2,
+    )
     lines = [
-        "Return ONLY a JSON object, no prose before or after, matching this shape:",
+        "Return ONLY a JSON object, no prose before or after, matching this shape exactly.",
+        "Each value under `defects` must be a JSON boolean (true or false), not a string.",
         "",
-        json.dumps(
-            {
-                "defects": {d: "true|false" for d in DEFECT_CLASSES},
-                "evidence": {d: "one sentence citing what you observed" for d in DEFECT_CLASSES},
-                "verdict": "ACCEPT|REVISE|REJECT",
-            },
-            indent=2,
-        ),
+        example,
+        "",
+        f"`verdict` must be one of: {ACCEPT}, {REVISE}, {REJECT}.",
         "",
         "Defect classes:",
     ]
     lines += [f"  {name}: {text}" for name, text in DEFECT_DESCRIPTIONS.items()]
     return "\n".join(lines)
+
+
+def coerce_bool(value: object) -> bool:
+    """Interpret a model-supplied truth value without silently inverting it.
+
+    Models return `false`, `"false"`, `"False"`, `"no"` and `0` interchangeably. Python's `bool`
+    maps every non-empty string to `True`, so `bool("false")` is `True` — which turns a clean
+    verdict into a defect report. Anything unrecognised is treated as **False**, because a system
+    that cannot state a defect clearly has not established one.
+    """
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value != 0
+    if isinstance(value, str):
+        return value.strip().lower() in {"true", "yes", "y", "1", "present", "detected"}
+    return False
 
 
 def parse_audit(bundle_id: str, raw: str, cost_usd: float = 0.0, duration_ms: int = 0) -> Audit:
@@ -127,7 +154,7 @@ def parse_audit(bundle_id: str, raw: str, cost_usd: float = 0.0, duration_ms: in
     raw_defects = payload.get("defects") or {}
     return Audit(
         bundle_id=bundle_id,
-        defects={d: bool(raw_defects.get(d, False)) for d in DEFECT_CLASSES},
+        defects={d: coerce_bool(raw_defects.get(d, False)) for d in DEFECT_CLASSES},
         evidence={k: str(v) for k, v in (payload.get("evidence") or {}).items()},
         verdict=payload.get("verdict", ACCEPT),
         cost_usd=cost_usd,
