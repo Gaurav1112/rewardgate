@@ -75,6 +75,19 @@ four round-5 exploits defeated round-4 fixes. An unverified late fix is worse th
   executes it, so module-scope code in that patch runs on the host. Disclosed, not mitigated.
 - Representative trajectories exist for the two agents that ship inside the product. The
   development-time agents are documented as reconstructions, and labelled as such.
+- **The environment allowlist covers the harness, not the agent.** `execution._test_env()` passes
+  exactly `PATH HOME LANG LC_ALL TMPDIR PYTHONPATH PYTHONHASHSEED` and a reviewer confirmed injected
+  `GH_TOKEN` / `SSH_AUTH_SOCK` / `AWS_SECRET_ACCESS_KEY` canaries do not reach it. But
+  `exploit._run_agent` and `baseline.audit_bundle` invoke the `claude` CLI with no `env=` at all, so
+  the agent session inherits the full shell environment — and since the agent holds
+  `Bash(python -m pytest:*)`, any pytest it launches re-inherits it too. An earlier commit message
+  in this repository implied the leak was closed everywhere. It is closed in the adjudication path
+  only. Confirmed, not fixed.
+- **Two more paths reach ACCEPT with the held-out suite unmeasured.** If the agent's diff cannot be
+  captured, or if the *visible* suite fails to collect, the `elif` guard in `auditor.py` is skipped
+  entirely — there is no `visible_ran` analogue to the gate's `nop_ran`. A bundle shipping a
+  `.gitignore` containing `src/` survives `materialise` and `_prepare_sandbox`, makes every captured
+  diff empty, and reports every exploit as "RESISTED (no exploit found)". Confirmed, not fixed.
 - **The contamination scope set is read from the audited patch.** `files_in_patch(solution_patch)`
   decides which files are subtracted from the fingerprint, and the bundle author writes that patch.
   A reviewer demonstrated a contaminated bundle certifying clean by appending a hunk for a planted

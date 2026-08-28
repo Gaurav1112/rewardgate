@@ -113,7 +113,11 @@ def verification_commands(bundle_dir: Path, trace: AuditTrace) -> list[str]:
     # running against the reviewer's own working directory -- the same "operates on the enclosing
     # repo" class as the `git stash` bug this block was rewritten to fix.
     commands = [
-        f"cd {shlex.quote(str(shown))} || exit 1",
+        # `--` matters: shlex.quote does not protect against a path that IS a flag. A bundle
+        # directory named `-P` emitted `cd -P || exit 1`, which succeeds, changes to the
+        # parent, and leaves the following `patch -p1` running in the reviewer's home
+        # directory. The quoting held; the argument boundary did not.
+        f"cd -- {shlex.quote(str(shown))} || exit 1",
         "uv run pytest tests/ -q                             # no-op:  expect failures",
         "patch -p1 < solution.patch && uv run pytest tests/ -q  # oracle: expect all pass",
         "patch -R -p1 < solution.patch                       # restore the tree",
