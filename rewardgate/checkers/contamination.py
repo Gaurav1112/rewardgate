@@ -29,6 +29,25 @@ def _normalise(line: str) -> str:
     return re.sub(r"\s+", " ", line).strip()
 
 
+def _shipped_lines(bundle_dir: Path) -> set[str]:
+    """Every source line already visible in the bundle as shipped.
+
+    Read from the working tree rather than from git, because the question is what a solver can see
+    without touching history at all.
+    """
+    lines: set[str] = set()
+    for path in bundle_dir.rglob("*.py"):
+        parts = set(path.parts)
+        if ".git" in parts or "held_out" in parts or "__pycache__" in parts:
+            continue
+        try:
+            text = path.read_text()
+        except (OSError, UnicodeDecodeError):
+            continue
+        lines.update(_normalise(line) for line in text.splitlines())
+    return lines
+
+
 def _significant_solution_lines(patch: str) -> set[str]:
     """Lines the gold patch adds that are distinctive enough to identify it."""
     return {
@@ -130,6 +149,19 @@ def detect_git_contamination(bundle_dir: Path, solution_patch: str) -> Contamina
             if line.startswith("+") and not line.startswith("+++")
         }
 
+    # A "fingerprint" that is already sitting in the shipped buggy source is not a fingerprint.
+    # Gold patches routinely restate unchanged lines — a re-indented guard clause, a moved import,
+    # a hunk regenerated with less context — and history containing those lines only proves the
+    # baseline was committed. An adversarial review turned a *clean* bundle into a REJECT this way,
+    # citing the innocent `initial import` commit as the contaminating one.
+    solution_lines -= _shipped_lines(bundle_dir)
+    if not solution_lines:
+        return ContaminationFinding(
+            has_git=True,
+            error="every line the gold patch adds is already present in the shipped source, "
+                  "so history cannot be fingerprinted",
+        )
+
     try:
         # --all walks every ref, which is what surfaces a fix parked on a side branch.
         disclosed = solution_lines & added_lines_in(["log", "-p", "--all"])
@@ -140,6 +172,11 @@ def detect_git_contamination(bundle_dir: Path, solution_patch: str) -> Contamina
         if disclosed:
             current_lines = set(_git(["log", "--oneline"], bundle_dir).splitlines())
             for line in _git(["log", "--oneline", "--all"], bundle_dir).splitlines():
+                # Only commits that actually carry a disclosed line. Listing every commit in the
+                # repository under the heading "contaminating commits" accused the baseline import
+                # of a leak it had nothing to do with.
+                if not disclosed & added_lines_in(["log", "-p", "-1", line.split()[0]]):
+                    continue
                 marker = "[shortlog]" if line in current_lines else "[hidden]"
                 commits.append(f"{marker} {line}")
     except GitCommandError as exc:

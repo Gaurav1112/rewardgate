@@ -196,3 +196,71 @@ def test_a_deletion_only_gold_patch_is_indeterminate_not_clean(tmp_path):
     finding = detect_git_contamination(bundle, deletion_only)
     assert finding.indeterminate
     assert not finding.contaminated
+
+
+# --- contamination must not accuse an innocent commit ----------------------------------
+
+def _repo(tmp_path, files: dict[str, str], message: str = "initial import"):
+    bundle = tmp_path / "b"
+    for name, text in files.items():
+        (bundle / name).parent.mkdir(parents=True, exist_ok=True)
+        (bundle / name).write_text(text)
+    subprocess.run(["git", "init", "-q"], cwd=bundle, check=False, capture_output=True)
+    subprocess.run(["git", "add", "-A"], cwd=bundle, check=False, capture_output=True)
+    subprocess.run(
+        ["git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", message],
+        cwd=bundle, check=False, capture_output=True,
+    )
+    return bundle
+
+
+def test_a_gold_patch_restating_a_shipped_line_is_not_contamination(tmp_path):
+    """The worst possible false positive: REJECT on a clean bundle.
+
+    Gold patches routinely restate unchanged lines -- a re-indented guard, a moved import, a hunk
+    regenerated with less context. Those lines are already in the shipped buggy source, so history
+    containing them proves only that the baseline was committed. An adversarial review used exactly
+    this to turn a clean bundle into a REJECT that cited `initial import` as the leak.
+    """
+    from rewardgate.checkers.contamination import detect_git_contamination
+
+    source = 'def retry(attempt):\n    raise ValueError("attempt must be >= 1")\n    return attempt\n'
+    bundle = _repo(tmp_path, {"src/m.py": source})
+    # The patch restates the raise (already shipped) and adds one genuinely new line.
+    patch = (
+        "diff --git a/src/m.py b/src/m.py\n--- a/src/m.py\n+++ b/src/m.py\n@@ -1,3 +1,4 @@\n"
+        '+    raise ValueError("attempt must be >= 1")\n'
+        "+    return min(MAX_DELAY_SECONDS, 2 ** attempt)\n"
+    )
+    finding = detect_git_contamination(bundle, patch)
+    assert not finding.contaminated, f"false positive: {finding.reason}"
+    assert not finding.commits
+
+
+def test_only_commits_carrying_a_disclosed_line_are_named(tmp_path):
+    """The report listed every commit in the repository under 'contaminating commits', so an
+    innocent baseline import was named alongside the real leak."""
+    from rewardgate.checkers.contamination import detect_git_contamination
+
+    bundle = _repo(tmp_path, {"src/m.py": "def parse(row):\n    return row.split(',')\n"})
+    (bundle / "src" / "m.py").write_text(
+        "def parse(row):\n    return next(csv.reader([row]))\n"
+    )
+    subprocess.run(["git", "add", "-A"], cwd=bundle, check=False, capture_output=True)
+    subprocess.run(
+        ["git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "fix parsing"],
+        cwd=bundle, check=False, capture_output=True,
+    )
+    # A contaminated bundle ships the BUGGY tree; the fix survives only in history. Leaving the
+    # fixed source in place would mean the line is visible without touching git at all, which is a
+    # different (and non-)finding.
+    (bundle / "src" / "m.py").write_text("def parse(row):\n    return row.split(',')\n")
+    patch = (
+        "diff --git a/src/m.py b/src/m.py\n--- a/src/m.py\n+++ b/src/m.py\n@@ -1,2 +1,2 @@\n"
+        "+    return next(csv.reader([row]))\n"
+    )
+    finding = detect_git_contamination(bundle, patch)
+    assert finding.contaminated
+    assert len(finding.commits) == 1, finding.commits
+    assert "fix parsing" in finding.commits[0]
+    assert not any("initial import" in c for c in finding.commits)
