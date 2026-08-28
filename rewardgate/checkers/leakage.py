@@ -20,16 +20,11 @@ create and could not tune against.
 
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass, field
 
-# `diff --git a/<path> b/<path>` — the a/ side is enough; renames are counted at their source.
-_DIFF_HEADER = re.compile(r"^diff --git a/(\S+)", re.MULTILINE)
+from rewardgate.diffutil import files_in_patch
 
-
-def files_in_patch(patch: str | None) -> set[str]:
-    """Return the set of repository paths a unified diff modifies."""
-    return set(_DIFF_HEADER.findall(patch or ""))
+__all__ = ["LeakageFinding", "detect_solution_leakage", "files_in_patch"]
 
 
 @dataclass(frozen=True)
