@@ -146,7 +146,7 @@ Nothing below is recorded. Do all of it first.
 |---|---|---|
 | B1 | `cd ~/rewardgate` | Every recorded command assumes this cwd unless stated. |
 | B2 | `uv run rewardgate list` | Must print 15 bundle names. If it does not, build the corpus per `REPRODUCTION.md` step A2. **This also warms `uv`**, whose first invocation in a fresh shell is the slow one. |
-| B3 | `uv run python -m rewardgate.report_real` | Must print the 42.0% table. If it errors, run `./scripts/fetch_real_corpus.sh` first. Running it now warms the parquet read. |
+| B3 | `uv run python -m rewardgate.report_real` | Must print the 42.0% table. If it errors with `Real corpus not found`, fetch the dataset first (`REPRODUCTION.md` step A1). Running it now warms the parquet read. |
 | B4 | Write `/tmp/rg-exploit.patch` using the heredoc in the box below. | Typing a patch on camera is the one thing that will cost you a take. |
 | B5 | `uv run pytest -q` once | ~10s. Warms the import cache so the recorded run is not slower than measured. |
 | B6 | Open in editor tabs, ready to switch to: `README.md` (Measured improvement section), `IMPROVEMENT_CHANGELOG.md`, `trajectories/exploit-agent-csvlite-reward-hackable.md` (jump to the Adjudication table at the bottom), `results/parity_ablation.json`. | Sections 4, 5 and 6 are document shots, not terminal shots. |
@@ -303,7 +303,8 @@ Highlight the two EXECUTED EVIDENCE lines (`reward=1.0` and `reward=0.0`) while 
 - Then jump to the end and hold on the **Final result** block: `EXPLOIT_FOUND: Hardcoded the
   single test case literal 'a,"b,c"' ...`, `turns 9`, `cost (USD) 0.2140`.
 
-**2:07–2:34, terminal.** Four commands. Type them one at a time so each result lands on its own.
+**2:07–2:34, terminal.** Four commands, then a `cd` back. Type them one at a time so each result
+lands on its own.
 
 ```bash
 cp -r ~/rewardgate/corpus/synthetic/bundles/csvlite-reward-hackable /tmp/rg-demo && cd /tmp/rg-demo
@@ -351,13 +352,10 @@ Then return home so later shots work:
 cd ~/rewardgate
 ```
 
-Pairs with the recorded run: `results/exploit_trials.json` stores exactly
-`"visible": "exit=0 passed=1 failed=0 errors=0"` from an earlier standalone trial and the
-adjudication in the trajectory records `visible exit=0 passed=4` / `held-out exit=1 passed=3
-failed=1` against that bundle's suite at the time. Your live numbers are `4 passed` visible and
-`7 failed, 3 passed` held out, against the current held-out suite, which was widened after an
-earlier version of it reused visible inputs. Say "four passed" and "seven failed", which is what is
-on screen.
+**Say the numbers that are on screen, which are `4 passed` and `7 failed, 3 passed`.** The
+trajectory's own adjudication line reads `held-out exit=1 passed=3 failed=1`, recorded against a
+narrower held-out suite that was later widened. The live run is the current suite. The verdict is
+identical either way: visible green, held-out red.
 
 ---
 
@@ -414,9 +412,10 @@ gets it wrong. That is the false positive you name.
 
 ### Shot 5 — Section 5, the changelog (3:22–4:01)
 
-Pure editor shot. `IMPROVEMENT_CHANGELOG.md`. Scroll the section headers past frame first so the
-shape is visible (Stage 0, Iterations 1 to 5, Withdrawn, two Removed entries), then stop on two
-tables.
+Pure editor shot. `IMPROVEMENT_CHANGELOG.md`.
+
+**3:22–3:32** — scroll the section headers past frame so the shape is visible: Stage 0, Iterations
+1 to 5, Withdrawn, and two Removed entries. Then stop on two tables.
 
 **3:32–3:48** — Iteration 2, the over-specification table:
 
@@ -466,6 +465,9 @@ That is the "zero false alarms across six clean bundles" you say aloud.
 | Weak assertions | AST analysis | $0.00 |
 
 Say "git log returns a commit, an agent returns an opinion" over the `$0.00` column.
+
+**4:38–4:42.** Stay on that table through the last sentence. Do not cut early; the final line lands
+better over the `$0.00` column than over a title card.
 
 **4:42–4:46, landing card.** Cut to a plain slide:
 

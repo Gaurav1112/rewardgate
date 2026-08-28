@@ -1,0 +1,17 @@
+SWE-bench Verified — 500 instances, deterministic checks, $0.00
+==============================================================================
+solution leakage (gold file named)     133/500  ( 26.6%)  published figure: 135 — delta 2
+  of which full path (high conf.)      107/500  ( 21.4%)  
+over-specified (internal symbol)        42/500  (  8.4%)  
+  high severity (symbol + file)         16/500  (  3.2%)  
+hint text present                      335/500  ( 67.0%)  
+  hint discloses gold-patch lines       54/500  ( 10.8%)  
+weak fail-to-pass assertions            48/350  ( 13.7%)  of instances whose test diff parses
+  assertion parse coverage             350/500  ( 70.0%)  
+------------------------------------------------------------------------------
+AT LEAST ONE DEFECT                    210/500  ( 42.0%)  
+clean on all four checks               290/500  ( 58.0%)  
+
+Limitation stated plainly: 150/500 instances are INDETERMINATE for assertion analysis (the diff adds no test function, or is a mid-file hunk that does not parse). Those are excluded from the weak-assertion rate rather than counted as clean.
+
+saved -> /Users/user/rewardgate/results/real_corpus_findings.json
