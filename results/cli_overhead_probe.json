@@ -1,0 +1,9 @@
+{
+  "purpose": "Measures the fixed per-session overhead of a headless `claude -p` call.",
+  "prompt": "Reply with exactly: OK",
+  "total_cost_usd": 0.19671300000000003,
+  "input_tokens": 9,
+  "cache_creation_input_tokens": 31711,
+  "output_tokens": 428,
+  "note": "Cache-creation tokens are the runtime's system prompt and tool schemas, injected once per fresh session before any task work."
+}

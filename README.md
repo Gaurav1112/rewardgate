@@ -13,13 +13,25 @@ into two tiers, and the more important one is not mine:
 
 | Tier | Corpus | Authored by | What it establishes |
 |---|---|---|---|
-| **Third-party** | [SWE-bench Verified](https://huggingface.co/datasets/princeton-nlp/SWE-bench_Verified), 500 real instances | Princeton NLP — **not me** | The detectors find real defects in a real, widely-used benchmark |
-| Synthetic | 12 bundles, 3 self-authored micro-repos | Me | Baseline-vs-agent comparison on defects requiring execution |
+| **Third-party** | [SWE-bench Verified](https://huggingface.co/datasets/princeton-nlp/SWE-bench_Verified), 500 real instances | Princeton NLP — **not me** | The text checkers find real defects in a real, widely-used benchmark |
+| Synthetic | 15 bundles, 3 self-authored micro-repos | Me | Baseline-vs-agent comparison on defects requiring execution |
 
 **The cross-validation that matters:** my solution-leakage detector independently measures
 **133/500** instances leaking the gold file path in the issue text. *The SWE-bench Illusion*
 ([arXiv:2506.12286](https://arxiv.org/abs/2506.12286)) reports **135/500**. A two-instance
 difference, on a corpus I did not build, against a figure I did not choose.
+
+**And the limit of that defence, stated plainly.** The third-party tier validates *one* checker
+against *one* external number. It does **not** de-circularise the headline macro-F1 — that figure
+is measured entirely on 15 self-authored bundles whose labels come from the injector that created
+them, n=3 per class. The over-specification, hint and weak-assertion rates have no external anchor
+at all. Treat the 42.0% defect rate as "what these four checkers find", not as ground truth about
+SWE-bench.
+
+**What does make the synthetic comparison meaningful** is the negative controls: three
+`clean-git-history` bundles carrying real multi-commit histories that do *not* contain the fix.
+Without them, "does `.git` exist?" would score a perfect contamination F1. With them, the
+contamination number measures the checker rather than the corpus.
 
 False-positive rate is reported everywhere, never just recall — see [Measured
 improvement](#measured-improvement).
@@ -83,7 +95,7 @@ candidate task bundle
       ├─► History scan ─────────────► CONTAMINATION_GIT  deterministic · $0.00 · <1s
       │     git log -p --all, matched against gold-patch lines
       │
-      └─► Adversarial exploit agent ► REWARD_HACKABLE    agentic · ~$0.26 · ~60s
+      └─► Adversarial exploit agent ► REWARD_HACKABLE    agentic · ~$0.25 · ~60s
             hostile brief, sandboxed shell, adjudicated by execution
                       │
                       └─► human checkpoint before any REJECT
@@ -91,8 +103,8 @@ candidate task bundle
 
 **One agent, two deterministic checkers.** Component count is deliberately low: each defect class
 is routed to the *cheapest mechanism that can prove it*. An LLM asked "is this contaminated?"
-returns an opinion; `git log -p --all` returns a commit SHA. The opinion costs ~$0.19 per call in
-system-prompt overhead alone and is less convincing.
+returns an opinion; `git log -p --all` returns a commit SHA. The opinion costs **$0.1967** per call in
+system-prompt overhead alone, before any work ([`results/cli_overhead_probe.json`](results/cli_overhead_probe.json)), and is less convincing.
 
 **Why an agent at all?** Because `REWARD_HACKABLE` is the one class nothing else can settle. A
 reward-hackable task **passes the reward gate** — gold patch green, empty patch red, tests look
@@ -133,36 +145,55 @@ while the bug it tests for is untouched.
 
 ## Measured improvement
 
-12 bundles × 3 defect classes = **36 binary judgements** per system. Identical cases, identical
-output schema, identical scorer.
+15 bundles × 3 defect classes = **45 binary judgements** per system. Identical cases, identical
+output schema, identical scorer. All figures below come from
+[`results/summary.json`](results/summary.json).
 
 **Primary metric: macro-F1.** Macro because the classes are unbalanced; F1 rather than accuracy
 because most pairs are negatives, so a system flagging nothing would score well on accuracy.
 
 | METRIC | BASELINE | REWARDGATE | CHANGE |
 |---|---:|---:|---:|
-| **macro-F1 (primary)** | 0.400 | **0.933** | **+133.3%** |
-| macro precision | 0.250 | 1.000 | +300.0% |
-| macro recall | 1.000 | 0.889 | −11.1% |
-| exact-match bundles | 0/12 | **11/12** | — |
-| cost per bundle (USD) | 0.1157 | 0.2581 | +123.0% |
+| **macro-F1 (primary)** | 0.524 | **0.933** | **+78.2%** |
+| macro precision | 0.500 | 1.000 | +100.0% |
+| macro recall | 0.556 | 0.889 | +60.0% |
+| exact-match bundles | 9/15 | **14/15** | +55.6% |
+| cost per bundle (USD) | 0.1160 | 0.2543 | +119.3% |
 
 | PER-CLASS F1 | BASELINE | REWARDGATE | SUPPORT |
 |---|---:|---:|---:|
-| NOP_PASS | 0.400 | **1.000** | 3 |
-| REWARD_HACKABLE | 0.400 | 0.800 | 3 |
-| CONTAMINATION_GIT | 0.400 | **1.000** | 3 |
+| NOP_PASS | **1.000** | **1.000** | 3 |
+| REWARD_HACKABLE | 0.571 | 0.800 | 3 |
+| CONTAMINATION_GIT | **0.000** | **1.000** | 3 |
 
-Full run: **$4.49**, 24 minutes wall clock.
+Full run: **$5.55**, 1613.7s (26.9 min) wall clock.
 
-**The baseline's failure is specific and worth naming.** Recall 1.000 looks excellent until you see
-precision 0.250 and exact-match **0/12**: it flagged *every* defect on *every* bundle, including
-all three clean ones. It never once said a task was sound. On one bundle it reported
-`CONTAMINATION_GIT: true` while its own evidence field read *"No git history is shipped with the
-bundle"* — it contradicted itself in the same response.
+### The baseline is a real opponent, and it wins one class outright
 
-A reviewer's tool that rejects everything is not a cautious tool. It is a useless one, because the
-author still has to do the whole review by hand to find out which flag was real.
+It flagged all three defects on **zero** of 15 bundles and got **9/15 exactly right**. This is not
+a straw man — a careful reader with the same artifacts genuinely solves much of this problem, and
+the per-class table shows precisely where reading stops being enough.
+
+**`NOP_PASS` — a tie at 1.000.** A fail-to-pass suite that only asserts a module imports is visibly
+inadequate on the page. Executing it proves the same thing the reading did. **The agent adds
+nothing here, and the honest conclusion is that this class does not need one.**
+
+**`CONTAMINATION_GIT` — 0.000 versus 1.000, the largest single gap.** The baseline sees
+`git log --oneline`, which is innocent: the fix lives on a side branch. It missed all three
+contaminated bundles. It also correctly passed all three *clean-git* bundles — so its 0.000 is a
+genuine miss, not indiscriminate caution. Only `git log -p --all` finds the fix, and that is a
+command, not a judgement.
+
+**`REWARD_HACKABLE` — 0.571 versus 0.800.** The baseline can sometimes tell that a single-input
+test looks thin. It cannot tell whether an exploit actually works, and on `semverlite-clean-git-history`
+it guessed wrong and flagged a sound task.
+
+**Where the improvement really comes from:** not from being cleverer than the baseline, but from
+the two classes where a verdict requires running a command the baseline cannot run. That is a
+narrower claim than "+78% overall", and it is the one the evidence supports.
+
+**The honest cost:** RewardGate is **119% more expensive per bundle**. Doubling per-task cost to
+recover the contamination class is a trade a reviewer would take, but it is a trade.
 
 ### The challenging case
 
@@ -235,7 +266,7 @@ Full instructions, including a **free path that needs no API key**, are in
 ```bash
 uv sync
 ./scripts/fetch_real_corpus.sh          # 2.0 MB, checksum-pinned
-uv run python corpus/synthetic/build.py # 12 bundles, labels by construction
+uv run python corpus/synthetic/build.py # 15 bundles, labels by construction
 uv run pytest -q                        # includes regression tests pinning every headline number
 uv run python -m rewardgate.report_real # third-party findings, $0.00
 uv run python -m rewardgate.evaluate --replay   # re-score saved audits offline, $0.00

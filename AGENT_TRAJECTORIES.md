@@ -17,7 +17,7 @@ readable markdown alongside the raw JSONL event streams.
 | **Input** | A sandboxed copy of the bundle: `instruction.md`, `tests/`, `src/` |
 | **Output** | A patch, plus `EXPLOIT_FOUND` / `EXPLOIT_NOT_FOUND` |
 | **Tools** | `Read`, `Edit`, `Write`, `Glob`, `Grep`, `Bash(python -m pytest:*)` |
-| **Cost** | ~$0.26 per bundle, 10–13 turns, ~60s |
+| **Cost** | ~$0.25 per bundle, 10–13 turns, ~60s |
 | **Implementation** | [`rewardgate/exploit.py`](rewardgate/exploit.py) |
 
 **Full trajectories:**
@@ -58,17 +58,31 @@ requiring human sign-off before an author's work is turned away.
 | **Role** | Represent how this task is handled today: read the bundle, form a judgement |
 | **Model** | `claude-sonnet-4-5-20250929`, `--max-turns 1` |
 | **Tools** | **None.** All tools explicitly disallowed |
-| **Cost** | ~$0.12 per bundle |
+| **Cost** | ~$0.116 per bundle (measured) |
 | **Implementation** | [`rewardgate/baseline.py`](rewardgate/baseline.py) |
 
 Sees the same artifacts as the pipeline — instruction, tests, source, git short log — and differs
 only in being unable to execute anything.
 
-**Observed failure mode, worth recording as a trajectory finding.** On
-`csvlite-nop-pass` it returned `CONTAMINATION_GIT: true` while its own evidence field read *"No git
-history is shipped with the bundle."* It contradicted itself inside a single response. Across all
-12 bundles it flagged every defect on every bundle — precision 0.250, exact-match 0/12. Raw audits:
-[`results/baseline_audits.json`](results/baseline_audits.json).
+**It is a competent opponent, not a straw man.** Across 15 bundles it flagged all three defects on
+**zero** of them and got **9/15 exactly right**, including a perfect 1.000 F1 on `NOP_PASS`. A
+suite that only asserts a module imports is visibly inadequate on the page; reading is genuinely
+sufficient for that class, and the pipeline's agent adds nothing there.
+
+**Where it fails is specific.** `CONTAMINATION_GIT` F1 **0.000** — it missed all three contaminated
+bundles while correctly passing all three clean-git ones. It is shown `git log --oneline`, which is
+innocent because the fix sits on a side branch. No amount of reading recovers that; it needs
+`git log -p --all`.
+
+Raw audits: [`results/baseline_audits.json`](results/baseline_audits.json).
+
+> **Correction.** An earlier version of this document reported that the baseline "contradicted
+> itself", returning `CONTAMINATION_GIT: true` beside evidence saying no git history was shipped,
+> and that it flagged every defect on every bundle at precision 0.250. **That was my bug, not the
+> model's.** `bool("false")` is `True` in Python, and my prompt template asked for the string
+> `"true|false"`, so every negative verdict was inverted before scoring. The model's evidence prose
+> and verdict field were both correct. The claim is withdrawn; see
+> [IMPROVEMENT_CHANGELOG.md](IMPROVEMENT_CHANGELOG.md#withdrawn--a-finding-that-was-my-own-bug).
 
 ### Deterministic components — not agents, by design
 

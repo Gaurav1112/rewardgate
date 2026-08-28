@@ -51,8 +51,8 @@ def baseline_trajectory(bundle_id: str) -> float:
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / f"baseline-{bundle_id}.md").write_text(
         f"# Trajectory — Baseline auditor, {bundle_id}\n\n"
-        "One prompt, no tools, one turn. Included because the brief asks for every agent used, "
-        "and because the failure mode is only legible in the raw response.\n\n"
+        "One prompt, no tools, one turn. Included because the brief asks for every agent used. "
+        "Its reasoning is sound here; the transcript shows the ceiling of reading without executing.\n\n"
         "## Agent instructions (full prompt)\n\n```text\n"
         f"{prompt}\n```\n\n"
         "## Response\n\n```json\n"

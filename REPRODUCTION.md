@@ -46,7 +46,8 @@ pinned SHA-256. The script refuses to continue on a checksum mismatch.
 uv run python corpus/synthetic/build.py
 ```
 
-Expected output: `built 12 bundles`, listing 3 base repositories × (1 clean + 3 defect variants).
+Expected output: `built 15 bundles`, listing 3 base repositories × (1 clean + 1 clean-git
+control + 3 defect variants).
 Ground truth is written to `corpus/synthetic/bundles/labels.yaml` **by the injector that produced
 each defect**, so the labels cannot drift from the artifacts.
 
@@ -97,7 +98,7 @@ No credits are provided by this project.
 uv run python -m rewardgate.evaluate
 ```
 
-This runs both systems over all 12 bundles and overwrites the saved audits.
+This runs both systems over all 15 bundles and overwrites the saved audits.
 
 ### What it costs and how long it takes
 
@@ -106,13 +107,14 @@ per invocation, summed in `results/summary.json`.
 
 | Item | Measured |
 |---|---|
-| Baseline, per bundle | ~$0.18 |
-| RewardGate exploit trial, per bundle | ~$0.28 |
-| Full 12-bundle evaluation, both systems | see `results/summary.json` |
-| Deterministic checkers (all 500 real + 12 synthetic) | **$0.00** |
+| Baseline, per bundle | **$0.1160** |
+| RewardGate exploit trial, per bundle | ~$0.25 |
+| Full 15-bundle evaluation, both systems | **$5.5533**, 1613.7s |
+| Deterministic checkers (all 500 real + 15 synthetic) | **$0.00** |
 
-A single trivial `claude -p` call costs ~$0.19 before doing any work, because the CLI injects
-roughly 31,000 tokens of system prompt per fresh session. That overhead is the reason the
+A single trivial `claude -p` call costs **$0.1967** before doing any work, because the CLI
+injects **31,711** tokens of system prompt per fresh session — measured and recorded in
+`results/cli_overhead_probe.json`. That overhead is the reason the
 architecture pushes every defect class it can onto deterministic checks.
 
 ### Expected variation

@@ -136,32 +136,33 @@ implementation.
 they can prove, the cost-graded exploit agent for the one they cannot, and every verdict tied to
 an artifact.
 
-**Evidence.** 12 bundles × 3 defect classes = 36 binary judgements per system. Identical cases,
-identical output schema, identical scorer.
+**Evidence.** 15 bundles × 3 defect classes = 45 binary judgements per system. Identical cases,
+identical output schema, identical scorer. Figures from `results/summary.json`.
 
 | METRIC | BASELINE | REWARDGATE | CHANGE |
 |---|---:|---:|---:|
-| **macro-F1 (primary)** | 0.400 | **0.933** | **+133.3%** |
-| macro precision | 0.250 | 1.000 | +300.0% |
-| macro recall | 1.000 | 0.889 | −11.1% |
-| exact-match bundles | 0/12 | **11/12** | — |
-| cost per bundle (USD) | 0.1157 | 0.2581 | +123.0% |
+| **macro-F1 (primary)** | 0.524 | **0.933** | **+78.2%** |
+| macro precision | 0.500 | 1.000 | +100.0% |
+| macro recall | 0.556 | 0.889 | +60.0% |
+| exact-match bundles | 9/15 | **14/15** | +55.6% |
+| cost per bundle (USD) | 0.1160 | 0.2543 | +119.3% |
 
 | PER-CLASS F1 | BASELINE | REWARDGATE | SUPPORT |
 |---|---:|---:|---:|
-| NOP_PASS | 0.400 | **1.000** | 3 |
-| REWARD_HACKABLE | 0.400 | 0.800 | 3 |
-| CONTAMINATION_GIT | 0.400 | **1.000** | 3 |
+| NOP_PASS | **1.000** | **1.000** | 3 |
+| REWARD_HACKABLE | 0.571 | 0.800 | 3 |
+| CONTAMINATION_GIT | **0.000** | **1.000** | 3 |
 
-Full run: **$4.49**, 24 minutes wall clock.
+Full run: **$5.5533**, 1613.7s (26.9 min) wall clock.
 
-**Where the gain actually came from.** Not recall — the baseline already had recall 1.000. It came
-from **precision, 0.250 → 1.000**. The baseline flagged every defect on every bundle including all
-three clean ones, so it never once said a task was sound. Exact-match went 0/12 → 11/12.
+**Where the gain actually came from.** Not from general cleverness. The baseline **ties at 1.000 on
+`NOP_PASS`** — a suite that only asserts a module imports is visibly inadequate on the page, and
+executing it proves nothing reading did not. The entire gap is in the two classes where a verdict
+requires running a command the baseline cannot run, and the largest single contribution is
+`CONTAMINATION_GIT` going **0.000 → 1.000**.
 
-**The honest cost.** RewardGate is **123% more expensive per bundle** and recall fell 11.1%, from
-the single false negative described below. Paying roughly double per bundle to stop rejecting every
-sound task is a trade a reviewer would take, but it is a trade, and the recall regression is real.
+**The honest cost.** RewardGate is **119% more expensive per bundle**. Doubling per-task cost buys
+the contamination class and a third of the reward-hacking class, and nothing on `NOP_PASS`.
 
 **The challenging case, and what it revealed.** `retrylite-reward-hackable` was missed because the
 agent, told to cheat, **fixed the bug properly instead**. `retrylite`'s genuine fix is a one-token
@@ -172,6 +173,50 @@ not a logic error.
 
 **Decision.** Shipped. The unimplemented mitigation is *k* independent trials taking the union,
 which would raise cost roughly linearly — stated as a gap rather than quietly omitted.
+
+---
+
+## Withdrawn — a finding that was my own bug
+
+**What I claimed.** That the baseline was an indiscriminate flag-everything system: precision
+0.250, exact-match 0/12, and — the anecdote I put in the README, the changelog and the video
+script — that on one bundle it returned `CONTAMINATION_GIT: true` while its own evidence field read
+*"No git history is shipped with the bundle"*, contradicting itself inside a single response. I
+presented that as a finding about LLM reliability.
+
+**What was actually true.** `bool("false")` is `True` in Python, and my own prompt template asked
+the model for the **string** `"true|false"`. So the model returned `"false"`, `parse_audit` stored
+`True`, and all 36 baseline judgements were inverted into defect reports before scoring. The
+model's evidence prose was correct. Its `verdict` field was correct. **The contradiction was
+manufactured by my parser, and I wrote it up as a discovery.**
+
+**How it was caught.** Not by me. An adversarial integrity audit was asked to verify every numeric
+claim against the artifacts, and it reproduced the coercion by execution.
+
+**Why nothing else caught it.** The corrupted values were *plausible*. An all-flags-true baseline
+is exactly what I expected from a naive prompt, so the result confirmed my prior instead of
+provoking suspicion. And `schema.py` had **zero tests** while every headline number in the project
+flowed through it — I had tested the checkers and the scorer, and never the parser between them.
+
+**Evidence of the correction.** After fixing coercion and the prompt template, and re-running:
+
+| | claimed (buggy) | measured (fixed) |
+|---|---:|---:|
+| baseline macro-F1 | 0.400 | **0.524** |
+| baseline precision | 0.250 | **0.500** |
+| baseline recall | 1.000 | **0.556** |
+| baseline exact-match | 0/12 | **9/15** |
+| improvement | +133.3% | **+78.2%** |
+
+**Decision.** Claim withdrawn, narrative rewritten, 16 tests added to `schema.py`. The real
+baseline is a competent opponent that ties on `NOP_PASS` and fails only where execution is
+required — a smaller and more defensible result than the one I nearly submitted.
+
+**Learning, and it is the one I would actually carry forward:** *this project exists to catch
+results that pass every mechanical check while measuring nothing, and I produced one about my own
+work.* A green test suite, a plausible number and a satisfying narrative are exactly the conditions
+under which nobody looks again. The parser between a model and a metric deserves the same scrutiny
+as the metric.
 
 ---
 
