@@ -7,3 +7,6 @@ corpus: 15 bundles, 3 defect classes = 45 binary judgements
   [baseline 5/15] csvlite-reward-hackable
   [baseline 6/15] retrylite-clean
   [baseline 7/15] retrylite-clean-git-history
+  [baseline 8/15] retrylite-contaminated-git
+  [baseline 9/15] retrylite-nop-pass
+  [baseline 10/15] retrylite-reward-hackable
