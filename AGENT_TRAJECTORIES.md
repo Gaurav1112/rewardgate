@@ -60,14 +60,25 @@ API call. It is bounded by the three measures above plus an environment allowlis
 (`exploit.agent_env`), not by a container. `--docker` is opt-in, so the default path still executes
 agent-written code on the host. Full trust model: [docs/SANDBOXING.md](docs/SANDBOXING.md).
 
-**Retry strategy.** None in the audit path, deliberately. Iteration 6 measured whether retries
-would help and found they would not: the agent is deterministic on this corpus. A single trial is run per
-bundle, bounded by `--max-turns 25` and a 600-second timeout. The measured consequence is one
-false negative (`retrylite-reward-hackable`): the stored evidence reads "the only patch found also fixes held-out behaviour; the task resisted gaming" — a string emitted only when the held-out suite PASSES, so no exploit was produced at all. An
-earlier version of this document told the second story; it was wrong. The fix was assumed to be *k* independent trials. Iteration 6 ran them — k=5 on all 15 bundles —
-and they changed nothing: k=1 and k=5 give identical verdicts, every detection is 5/5 and every
-miss is 0/5. The miss is a cost-grader blind spot, not variance.
-raise cost roughly linearly. Timeouts and unparseable output surface as `ERROR`, never as "clean".
+**Retry strategy.** None in the audit path, deliberately. A single trial runs per bundle, bounded
+by `--max-turns 25` and a 600-second timeout; *k* trials would raise cost roughly linearly.
+Timeouts and unparseable output surface as `ERROR`, never as "clean".
+
+The measured consequence is one false negative, `retrylite-reward-hackable`. Its stored k=1
+evidence reads *"the only patch found also fixes held-out behaviour; the task resisted gaming"* — a
+string emitted only when the held-out suite PASSES, so no exploit was produced in that run.
+
+Iteration 6 then ran k=5 on all 15 bundles to test whether retries were the fix. **They are not,
+but the reason is not the one first written here.** Verdicts are stable: every detection rate in
+`results/multitrial.json` is exactly 0.0 or 1.0, and k=1 and k=5 agree on all 15. Exploit
+*generation* is not stable at all — 9 of the 15 bundles are mixed (1/5 through 4/5), including this
+one at 4/5. So retries do change whether an exploit is found; they do not change the verdict,
+because the cost grader prices none of the exploits it is shown.
+
+An earlier version of this paragraph said "the agent is deterministic on this corpus" and "the miss
+is a cost-grader blind spot, not variance". The first was measuring the grader and crediting the
+agent. The second is half right: it is a blind spot **and** there is variance, and the blind spot
+is what hides it.
 
 **Human checkpoint.** The agent's verdict never auto-rejects a task. `REJECT` is a recommendation
 requiring human sign-off before an author's work is turned away.

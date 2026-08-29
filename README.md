@@ -47,7 +47,7 @@ of their figure.
 ### If you have eight minutes
 
 1. `uv run python -m rewardgate.report_real` — the 42% finding. Free, about a second, no API key.
-2. [`rewardgate-demo.mp4`](rewardgate-demo.mp4) — 4:47 walkthrough.
+2. [`rewardgate-demo.mp4`](rewardgate-demo.mp4) — 4:46 walkthrough.
 3. [The ablation that refutes the headline](docs/EVALUATION.md#the-ablation-that-refutes-the-headline)
    — where I disproved my own result. `uv run python scripts/run_parity_ablation.py --replay`.
 4. [SUBMISSION.md](SUBMISSION.md) — the four deliverables, and every known defect in one place.
@@ -101,7 +101,7 @@ Both see the same bundles, emit the same schema, and are scored by the same func
 | **Reliability** | Every positive verdict carries a mechanical artifact — an exit code, a commit SHA, an exploit patch. Nothing rests on a model's assertion, which matters given a measured **18.5% evaluator–human misalignment rate** in LLM-as-judge ([arXiv:2607.02577](https://arxiv.org/abs/2607.02577)). |
 | **Coverage** | Two of three classes are settled **deterministically at $0.00**, so they can run in CI on every task, not just on a sample. |
 | **Safety** | `--docker` runs every test execution in a network-less, non-root container — [measured both ways](docs/SANDBOXING.md#measured-not-asserted), not asserted. |
-| **Engineering** | A check that cannot run returns `INDETERMINATE`, never `ACCEPT` — including on `--no-exploit`, where only two of three classes are examined. 293 tests, exit codes that distinguish "broken" from "uncheckable", and a documented bundle contract. |
+| **Engineering** | A check that cannot run returns `INDETERMINATE`, never `ACCEPT` — including on `--no-exploit`, where only two of three classes are examined. 296 tests, exit codes that distinguish "broken" from "uncheckable", and a documented bundle contract. |
 
 **And the honest limit, stated here rather than buried.** On the primary metric the advantage is
 small: macro-F1 **0.933** against a fair baseline's **0.889** on 15 bundles, one discordant
@@ -308,9 +308,10 @@ which reports evidence *against* this project's execution-over-judgement bet:
 - **An agent per defect class.** Deterministic checks produce stronger evidence at zero cost for
   every class except one. See [IMPROVEMENT_CHANGELOG.md](IMPROVEMENT_CHANGELOG.md#removed--a-per-defect-class-agent-fan-out).
 - **LLM-as-judge scoring.** The 18.5% evaluator-misalignment finding above is the reason.
-- **Multi-seed trials.** Implemented in Iteration 6 and they were *not* the fix. At k=5 the agent
-  is deterministic (5/5 or 0/5, nothing between), so the challenging case is a grader blind spot,
-  not sampling. What remains unimplemented is a semantic cost measure.
+- **Multi-seed trials.** Implemented in Iteration 6 and they were *not* the fix. At k=5 every
+  *detection* rate is 0.0 or 1.0, so retries never change a verdict — though they do change whether
+  an exploit is generated at all, on 9 of 15 bundles. The challenging case is a grader blind spot,
+  and what remains unimplemented is the semantic cost measure that would close it.
 - **Automatic repair** of detected defects. The tool reports; the human decides.
 
 ## Safety
@@ -353,7 +354,7 @@ Full instructions, including a **free path that needs no API key**, are in
 uv sync
 ./scripts/fetch_real_corpus.sh          # 2.0 MB, checksum-pinned
 uv run python corpus/synthetic/build.py # 15 bundles, labels by construction
-uv run pytest -q                        # 293 tests; pins every third-party-corpus number
+uv run pytest -q                        # 296 tests, 0 failed; pins every third-party number
 uv run python -m rewardgate.report_real # third-party findings, $0.00
 uv run python -m rewardgate.evaluate --replay   # re-score saved audits offline, $0.00
 ```
@@ -395,8 +396,10 @@ this repository.
 defect it does not report.**
 
 The k=5 experiment was designed to test whether `retrylite-reward-hackable` was missed through
-sampling noise. It is not. The agent found a working exploit in **5 of 5 trials** — visible suite
-green, held-out suite red, every time. What it wrote was an *interval* predicate:
+sampling noise. The agent found a working exploit in **4 of 5 trials** — visible suite green,
+held-out suite red. (In the fifth, `results/multitrial/retrylite-reward-hackable/t4.json`, it fixed
+the bug properly instead: `held_out exit=0 passed=10`, `verdict RESISTED`.) What it wrote in the
+other four was an *interval* predicate:
 
 ```python
 if 7 <= attempt <= 39:
@@ -406,8 +409,8 @@ if 7 <= attempt <= 39:
 `_HARDCODE_PATTERNS` matches equality, membership, `startswith`/`endswith`, `case`, and dict keys.
 A numeric range guard matches none of them, so `hardcoded_cases` is 0, `cost_measurable` is False,
 and the verdict degrades to `GAMEABLE (exploit cost not measurable)` — which `is_reward_hackable`
-does not count. The task is reward-hackable, the agent proved it five times out of five, and the
-regex could not put a number on it.
+does not count. The task is reward-hackable, the agent proved it four times out of five, and the
+regex could not put a number on any of them.
 
 So the failure is **detector expressiveness, not agent capability**, and it is the third time a
 reviewer has caught this same grader mispricing text it was not written for: a dict literal read as
@@ -421,9 +424,28 @@ detected and move macro-F1, but `results/multitrial_preregistration.json` freeze
 and changing it after seeing the trials is the tuning that pre-registration exists to prevent. The
 honest move is to report the blind spot and leave the number where it fell.
 
+**A correction that makes the finding sharper.** An earlier version of this section said the agent
+found the exploit 5 times out of 5 and concluded it was "deterministic here, not noisy". Both were
+wrong, and the stored trials say so. Counting across all 75:
+
+| | 0/5 or 5/5 | mixed |
+|---|---:|---:|
+| **exploit generated** | 6 bundles | **9 bundles** (1/5, 2/5, 3/5, 4/5) |
+| **defect detected** | 15 bundles | **0** |
+
+The agent is *highly* variable at producing exploits — every one of the 15 bundles yields at least
+one, clean bundles included. What is deterministic is the **verdict**, because the cost grader
+collapses that variance to zero. I measured the output of a lossy grader and credited the agent
+with its stability.
+
+This also qualifies Iteration 6's conclusion that retries buy nothing. They buy nothing *at the
+verdict level*, which is what the changelog measured and still holds. They demonstrably change
+whether an exploit is found at all — and the reason that does not reach the verdict is the same
+blind spot described above, not the agent's consistency.
+
 **The measured result, since it is the project's only significant one.** Across all 15 bundles at
-k=5 (75 trials, $26.67), every detection is 5/5 and every miss is 0/5 — the agent is deterministic
-here, not noisy. Exact permutation test over all 455 relabellings: statistic **+0.667**,
+k=5 (75 trials, $26.67), every *detection* rate is exactly 0.0 or 1.0 —
+`results/multitrial.json`. Exact permutation test over all 455 relabellings: statistic **+0.667**,
 **p = 0.0286**. And zero false alarms in **60 clean trials** at the same k as the positives, the
 stronger version of the earlier 0-in-6 figure. This says the agent discriminates reward-hackable
 tasks above chance. It does **not** say it beats the baseline, which remains p = 1.00.

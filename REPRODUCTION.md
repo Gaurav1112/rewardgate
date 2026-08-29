@@ -73,16 +73,16 @@ on this machine**, so in a terminal it first requires you to type `yes`; `--yes`
 uv run pytest -q
 ```
 
-Expected: **294 tests collected, 0 failed**, in roughly 10–20 seconds.
+Expected: **296 tests collected, 0 failed**, in roughly 10–20 seconds.
 
-How many of the 294 *run* depends on optional prerequisites, so the pass count is not a single
+How many of the 296 *run* depends on optional prerequisites, so the pass count is not a single
 number and this guide will not pretend it is. All three of these were observed:
 
 | State | Result |
 |---|---|
-| Clean clone, nothing else fetched | `287 passed, 7 skipped` |
-| After A4b fetches the held-out corpus | `290 passed, 4 skipped` |
-| After A8 builds `rewardgate-sandbox:1` | `294 passed` |
+| Clean clone, nothing else fetched | `289 passed, 7 skipped` |
+| After A4b fetches the held-out corpus | `292 passed, 4 skipped` |
+| After A8 builds `rewardgate-sandbox:1` | `296 passed` |
 
 Run `uv run pytest -q -rs` to see which are skipped and why; every skip names the command that
 enables it. **No configuration produces a failure** — that is the claim to hold this to. An earlier
@@ -229,7 +229,7 @@ Re-scores 75 saved exploit trials. **$0.00, under a second.** This is the projec
 statistically significant result, and the pre-registration that fixed its decision rule before any
 trial ran is in [`results/multitrial_preregistration.json`](results/multitrial_preregistration.json).
 
-Expected: every reward-hackable bundle at 5/5 or 0/5, zero detections on the other 12, statistic
+Expected: every *detection* rate exactly 0.0 or 1.0, zero detections on the other 12, statistic
 **+0.667**, exact permutation **p = 0.0286**.
 
 To regenerate rather than replay, drop `--replay`: 75 live agent trials, **~$27, ~2.5 hours**,

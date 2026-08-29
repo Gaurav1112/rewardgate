@@ -220,7 +220,7 @@ exists.** Absence of a found attack is not absence of an attack, and the audit's
 task resisted gaming") asserts the stronger claim. A single trial cannot support it.
 
 The k=5 experiment then settled it. See the README's *Main failure mode*: the agent finds a working
-exploit 5 times out of 5, and the grader cannot price the interval predicate it writes.
+exploit 4 times out of 5, and the grader cannot price the interval predicate it writes.
 
 No trajectory was captured for this bundle — `trajectories/` holds `csvlite` only — so I cannot say
 from the record whether the earlier single trial tried and failed or never tried. That gap is

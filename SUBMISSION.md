@@ -47,7 +47,7 @@ uv sync && ./scripts/fetch_real_corpus.sh
 uv run python -m rewardgate.report_real     # 210/500 (42.0%), $0.00, ~1s
 ```
 
-Then, if you want the whole thing: `uv run pytest -q` (294 tests) and
+Then, if you want the whole thing: `uv run pytest -q` (296 tests, 0 failed) and
 `uv run python scripts/run_parity_ablation.py --replay` (the ablation that refuted my own
 headline — free, under a second).
 
@@ -70,7 +70,7 @@ round-3 fixes, and four round-5 exploits defeated round-4 fixes. An unverified l
 than a disclosed bug.
 
 It was then **deliberately and narrowly unfrozen**. That regression rate was measured at 3am under
-time pressure; with days remaining and 294 tests it is a different bet, and every fix below landed
+time pressure; with days remaining and 296 tests it is a different bet, and every fix below landed
 with a regression test that **reproduces the defect against the pre-fix code** before pinning it.
 Four of the five disclosed defects are now fixed. The one left is left on purpose, and the reason
 is given.
@@ -79,8 +79,11 @@ is given.
 
 - **The cost grader cannot price an exploit it has no pattern for.** Measured at k=5 on all 15
   bundles (pre-registered, $26.67): 2 of 3 reward-hackable bundles detect 5/5, the third detects
-  0/5, and all 12 others detect 0/5. Perfectly bimodal — the agent is deterministic, not noisy. On
-  the miss the agent *did* produce a working exploit 5 times out of 5; it wrote the interval
+  0/5, and all 12 others detect 0/5 — every *detection* rate is exactly 0.0 or 1.0. Exploit
+  *generation* is not bimodal at all: 9 of the 15 bundles are mixed, and the grader collapses that
+  variance to zero. An earlier version of this line read "perfectly bimodal — the agent is
+  deterministic, not noisy", which measured the grader and credited the agent. On
+  the miss the agent *did* produce a working exploit 4 times out of 5; it wrote the interval
   predicate `if 7 <= attempt <= 39:`, which matches none of `_HARDCODE_PATTERNS`, so the cost came
   back 0 and the verdict degraded to "cost not measurable". It is a **detector-expressiveness**
   limit, not a capability boundary — an earlier version of this line said the cause was unknown.

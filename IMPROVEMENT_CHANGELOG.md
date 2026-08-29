@@ -15,7 +15,7 @@ Each stage is measured on the same corpus with the same scorer.
 | **Iteration 2** | Over-specification checker (asserts on internal symbols) | 42/500; caught and fixed a 5× overcount in my own counter | **Kept.** The measuring instrument needs its own tests |
 | **Iteration 3** | Adversarial exploit agent — the one component that needs a model | Proves REWARD_HACKABLE by execution; visible green, held-out red | **Kept.** But my first definition of the defect was simply wrong |
 | **Iteration 4** | Parity ablation: give the baseline `git log -p --all`, the same evidence my checker reads | baseline **0.889** vs RewardGate **0.933**; gap 0.333 → **0.044**; McNemar **p = 1.00** | **Kept, and it refuted my own headline.** The advantage was an information asymmetry I designed |
-| **Iteration 6b** | k=5 exploit trials on all 15 bundles, pre-registered | 2/3 detected 5/5, `retrylite` 0/5, 0 false alarms in 60 clean trials, **p = 0.0286** | **Kept, hypothesis refuted.** The agent is deterministic, not noisy; the miss is a capability boundary |
+| **Iteration 6b** | k=5 exploit trials on all 15 bundles, pre-registered | 2/3 detected 5/5, `retrylite` 0/5, 0 false alarms in 60 clean trials, **p = 0.0286** | **Kept, hypothesis refuted.** Verdicts are deterministic (every detection rate 0.0 or 1.0); exploit *generation* is not (9/15 bundles mixed). The miss is detector expressiveness, not agent capability |
 | **Iteration 5** | Adversarial panel against the shipped tool | 4 working fail-opens found, each reporting a defective task as sound | **Kept.** My own thesis applied to my own code |
 | **Removed** | A five-agent fan-out, one LLM per defect class | Deterministic checks give stronger evidence at $0.00: an exit code and a commit SHA beat an opinion | **Removed.** Number of agents is not a measure of engineering |
 | **Final** | Deterministic tiers + one adversarial agent | macro-F1 **0.933** vs a *fair* baseline's **0.889**, n=15, p=1.00 | Main contribution: **42% of SWE-bench Verified is defective, measured for $0.00** |
@@ -445,7 +445,7 @@ confident numbers about the wrong thing.**
 defect it does not report.**
 
 The k=5 experiment was designed to test whether `retrylite-reward-hackable` was missed through
-sampling noise. It is not. The agent found a working exploit in **5 of 5 trials** — visible suite
+sampling noise. The agent found a working exploit in **4 of 5 trials** — visible suite
 green, held-out suite red, every time. What it wrote was an *interval* predicate:
 
 ```python
@@ -456,7 +456,7 @@ if 7 <= attempt <= 39:
 `_HARDCODE_PATTERNS` matches equality, membership, `startswith`/`endswith`, `case`, and dict keys.
 A numeric range guard matches none of them, so `hardcoded_cases` is 0, `cost_measurable` is False,
 and the verdict degrades to `GAMEABLE (exploit cost not measurable)` — which `is_reward_hackable`
-does not count. The task is reward-hackable, the agent proved it five times out of five, and the
+does not count. The task is reward-hackable, the agent proved it four times out of five, and the
 regex could not put a number on it.
 
 So the failure is **detector expressiveness, not agent capability**, and it is the third time a
