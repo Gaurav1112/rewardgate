@@ -17,6 +17,8 @@ Each stage is measured on the same corpus with the same scorer.
 | **Iteration 4** | Parity ablation: give the baseline `git log -p --all`, the same evidence my checker reads | baseline **0.889** vs RewardGate **0.933**; gap 0.333 → **0.044**; McNemar **p = 1.00** | **Kept, and it refuted my own headline.** The advantage was an information asymmetry I designed |
 | **Iteration 6b** | k=5 exploit trials on all 15 bundles, pre-registered | 2/3 detected 5/5, `retrylite` 0/5, 0 false alarms in 60 clean trials, **p = 0.0286** | **Kept, hypothesis refuted.** Verdicts are deterministic (every detection rate 0.0 or 1.0); exploit *generation* is not (9/15 bundles mixed). The miss is detector expressiveness, not agent capability |
 | **Iteration 5** | Adversarial panel against the shipped tool | 4 working fail-opens found, each reporting a defective task as sound | **Kept.** My own thesis applied to my own code |
+| **Iteration 7** | Containerise every test execution, since the harness executes an agent-written patch on the host | Measured both ways: network `reachable` → `blocked (OSError)`, host write `written` → `blocked (FileNotFoundError)`, canary on disk `True` → `False` | **Kept.** The first version bind-mounted read-only and silently returned *wrong test results*; a container whose results are wrong is worse than none |
+| **Withdrawn (2)** | "The agent found a working exploit in 5 of 5 trials, so it is deterministic, not noisy" | `results/multitrial/retrylite-reward-hackable/t4.json` — `gameable false`, held-out `exit=0 passed=10`. It is **4 of 5** | **Withdrawn.** I measured a lossy grader's output and credited the agent with its stability |
 | **Removed** | A five-agent fan-out, one LLM per defect class | Deterministic checks give stronger evidence at $0.00: an exit code and a commit SHA beat an opinion | **Removed.** Number of agents is not a measure of engineering |
 | **Final** | Deterministic tiers + one adversarial agent | macro-F1 **0.933** vs a *fair* baseline's **0.889**, n=15, p=1.00 | Main contribution: **42% of SWE-bench Verified is defective, measured for $0.00** |
 
@@ -389,6 +391,88 @@ results that pass every mechanical check while measuring nothing, and I produced
 work.* A green test suite, a plausible number and a satisfying narrative are exactly the conditions
 under which nobody looks again. The parser between a model and a metric deserves the same scrutiny
 as the metric.
+
+---
+
+## Iteration 7 — containerise the execution, and the container that returned wrong answers
+
+**What I tried and why.** The largest gap this project had ever disclosed was that the harness asks
+an adversarial agent to write a patch and then *executes* it. Module-scope code in that patch ran
+on the host with the operator's permissions. The tool allowlist bounds what the agent **invokes**;
+it does not bound what it **writes**. `--docker` runs every test execution — the no-op trial, the
+oracle trial, and the adjudication — inside a container.
+
+**Evidence.** Not asserted from the flags. `scripts/prove_containment.py` builds a bundle whose
+test module tries three things an exploit patch would try and runs it **both ways**:
+
+| probe | host | contained |
+|---|---|---|
+| open a socket to 1.1.1.1:53 | `reachable` | `blocked (OSError)` |
+| write a canary to a host path | `written` | `blocked (FileNotFoundError)` |
+| canary on disk afterwards | `True` | `False` |
+| uid | 501 | 1000 |
+
+Artifact: `results/containment_proof.json`.
+
+**Decision / Learning. Kept — but the first working version was quietly wrong, and that is the
+part worth recording.** It bind-mounted the materialised bundle read-only. The *oracle* trial — the
+gold patch, which passes on the host — came back `0 passed, 11 failed`. The container was reading a
+stale view of a file the host had just rewritten: `return next(csv.reader([row]))` arrived inside as
+`return nex`, truncated to the previously cached length. macOS bind mounts are not coherent enough
+to write from the host and immediately read from a container.
+
+**A container whose test results are wrong is worse than no container**, because those results are
+what every verdict cites. Copying the tree in with `docker cp` fixed the coherence problem and, as
+a side effect, removed the host path from the container's view entirely — the safer design was also
+the correct one. `--docker` fails rather than falling back when the engine or image is missing, for
+the same reason: a run that silently degrades to host execution is worse than no flag, because
+containment was requested, not delivered, and nothing in the report says so.
+
+**What it does not fix.** The agent *session* is not contained and cannot be under `--network
+none`, because that session is an API call. See [docs/SANDBOXING.md](docs/SANDBOXING.md).
+
+---
+
+## Withdrawn — "5 of 5", and what it was really measuring
+
+**What I claimed.** Six documents stated that on the challenging case the agent "found a working
+exploit in **5 of 5 trials**", and concluded from the k=5 data that "the agent is deterministic
+here, not noisy". That conclusion was used to justify shipping no retries.
+
+**What the artifact says.** `results/multitrial/retrylite-reward-hackable/t4.json`:
+
+```json
+{ "gameable": false,
+  "held_out": { "exit_code": 0, "passed": 10, "failed": 0 },
+  "verdict": "RESISTED (agent had to fix it properly)" }
+```
+
+In that trial the agent **fixed the bug** rather than gaming it. The rate is **4 of 5**.
+
+**And the second claim was worse than the first.** Counting exploit generation across all 75 trials
+rather than detection:
+
+| | 0/5 or 5/5 | mixed |
+|---|---:|---:|
+| exploit generated | 6 bundles | **9 bundles** (1/5 … 4/5) |
+| defect detected | 15 bundles | **0** |
+
+The agent is *highly* variable at producing exploits — every one of the 15 bundles yields at least
+one, clean bundles included. What is deterministic is the **verdict**, because the cost grader
+collapses that variance to zero. I measured the output of a lossy grader and credited the agent
+with its stability.
+
+**Decision / Learning.** Iteration 6's conclusion that retries buy nothing survives *at the verdict
+level*, which is what it measured. It is now qualified at the generation level: retries demonstrably
+change whether an exploit is found, and the reason that never reaches a verdict is the same grader
+blind spot described in the main failure mode.
+
+Found by an independent panel scoring against the challenge PDF, not by me. Nothing in the
+295-test suite could have caught it: the tests covered the code that *produces* evidence and never
+a number quoted in prose from a committed artifact. Two tests now close that gap
+(`tests/test_docs_match_artifacts.py`), which is the same lesson as the *Withdrawn* section above —
+the third time this project has been wrong about its own numbers, and the second time the fix was
+a test that reads the artifact rather than the code.
 
 ---
 
