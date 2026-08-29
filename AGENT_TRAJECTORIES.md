@@ -107,6 +107,17 @@ than an opinion. An earlier design had one agent per defect class; it was remove
 Coding-agent use is required by the brief, and these shaped the project materially, so they are
 recorded too.
 
+> **Read this before the three sections below.** Everything from here to the end of §5 is a
+> **prose reconstruction, not a transcript.** These agents ran during development, before this
+> repository logged agent events, and their raw event streams were not retained. I am labelling
+> that rather than presenting a summary as though it were a record — the deliverable asks for
+> trajectories for every agent used, and for these I can give an accurate account of what they did
+> and what changed as a result, but not the tool calls.
+>
+> The three agents that ship *inside* the product — the exploit agent, the baseline auditor, and
+> the baseline in parity mode — have real transcripts with tool calls, tool responses and labelled
+> human checkpoints. Those are in [`trajectories/`](trajectories/) and are indexed above.
+
 ### 3. Research agents (3, parallel)
 
 **Role:** ground topic selection in evidence rather than memory. **Tools:** web search, page fetch,
@@ -161,6 +172,8 @@ contradicted the implementation.
 | `trajectories/exploit-agent-csvlite-clean.md` | Readable transcript, failed exploit |
 | `trajectories/exploit-agent-csvlite-clean.jsonl` | Raw event stream |
 | `trajectories/baseline-csvlite-nop-pass.md` | Baseline: full prompt and raw response |
+| `trajectories/baseline-parity-csvlite-contaminated-git.md` | Baseline in **parity mode** — the run that refuted this project's headline |
+| `results/multitrial_preregistration.json` | Decision rule and refutation conditions for the k-trial experiment, committed before it ran |
 | `results/baseline_audits.json` | Every baseline verdict, with evidence |
 | `results/rewardgate_audits.json` | Every pipeline verdict, with evidence |
 | `results/exploit_trials.json` | **Only the four `csvlite` control trials** from Iteration 3 — not the full corpus run |
@@ -176,6 +189,6 @@ streams. The transcripts are the same agent, same brief, same bundles, produced 
 `scripts/generate_trajectories.py` — but they are a separate invocation, and because model
 sampling is not pinnable the exploit text may differ from the run that produced the table.
 
-**Transcripts exist for 3 bundles, not all of them.** Storing full event streams for every bundle
+**Transcripts exist for 4 bundles, not all of them.** Storing full event streams for every bundle
 on every run would add roughly 100 KB per trial to the repository. The three chosen cover the
 distinct outcomes: exploit succeeds, exploit fails, and the baseline's single-turn response.
