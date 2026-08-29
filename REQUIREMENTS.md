@@ -17,11 +17,11 @@ Verified against the working tree; every path below exists.
 | Gate item | Where | Status |
 |---|---|---|
 | Repository obtainable | `github.com/Gaurav1112/rewardgate`, public | **PASS** |
-| Archive | `rewardgate-submission.zip` (`git archive`), verified to run standalone | **PASS** |
-| Tests | `uv run pytest -q` → 248 passed, ~11s, no API key | **PASS** |
+| Archive | built on demand with `git archive --format=zip --prefix=rewardgate/ HEAD -o rewardgate-submission.zip`; last build verified to run standalone (`uv sync && pytest` inside the extracted copy) | **PASS (built at submission time, not committed)** |
+| Tests | `uv run pytest -q` → 255 passed, ~11s, no API key | **PASS** |
 | README | [README.md](README.md) — user, bottleneck, why it matters | **PASS** |
 | Agent-use evidence | [AGENT_TRAJECTORIES.md](AGENT_TRAJECTORIES.md), [`trajectories/`](trajectories/) | **PASS** |
-| Demo video | [`rewardgate-demo.mp4`](rewardgate-demo.mp4), 4:46, tracked in-repo | **PASS** |
+| Demo video | [`rewardgate-demo.mp4`](rewardgate-demo.mp4), 4:47, tracked in-repo | **PASS** |
 | Reproducibility | [REPRODUCTION.md](REPRODUCTION.md); clean-clone run reproduces byte-identical results | **PASS** |
 
 ---
@@ -71,7 +71,7 @@ Verified against the working tree; every path below exists.
 | # | Rule | Status | Evidence |
 |---|---|---|---|
 | 1 | Build with tools you know | ✅ | stdlib + pytest + pyyaml + pyarrow; agent is the Claude Code CLI |
-| 2 | Clear what pre-existed vs what you added | ✅ | 43 commits, all inside the window; SWE-bench fetched not vendored; 15 papers cited |
+| 2 | Clear what pre-existed vs what you added | ✅ | 47+ commits, all inside the window; SWE-bench fetched not vendored; 15 papers cited |
 | 3 | Licences and service terms | ✅ | MIT `LICENSE`; dataset fetched at runtime, never redistributed |
 | 4 | Consequential actions sandboxed; human approval | ✅ | Interactive sessions must type `yes` before the exploit tier runs; the warning names host execution, the missing container, and the cost. Non-interactive callers are warned and proceed, which is a stated weakening. `--no-exploit` needs no approval because it executes nothing. **Still not a container** — that limitation is unchanged and disclosed. |
 | 5 | Qualified human reviewer in the loop | ✅ | An interactive REJECT now requires the reviewer to record **confirm / override / defer**, and the decision is printed into the report and sets the exit code. `override` exits 0: a reviewer who has read the evidence outranks the tool. `defer` exits 3, because undecided must not read as accepted. |
@@ -118,7 +118,7 @@ review rounds, and an unverified late fix is worth less than a disclosed defect.
 | macro-F1 0.600 baseline / 0.933 RewardGate | `uv run python -m rewardgate.evaluate --replay` |
 | Parity: 0.889 vs 0.933, gap 0.044, p = 1.00 | `uv run python scripts/run_parity_ablation.py --replay` |
 | McNemar p = 0.2500, 3 discordant | `uv run python -m rewardgate.significance` |
-| Every third-party corpus number is pinned | `uv run pytest -q` → 248 passed |
+| Every third-party corpus number is pinned | `uv run pytest -q` → 255 passed |
 | Cost $0.1174 / $0.2551 per bundle | `results/summary.json` |
 | CLI overhead $0.1967 before any work | `results/cli_overhead_probe.json` |
 

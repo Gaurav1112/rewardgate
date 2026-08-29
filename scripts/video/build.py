@@ -260,7 +260,7 @@ SEGMENTS = [
 LANDING = ("Reproduction", [
     "  git clone https://github.com/Gaurav1112/rewardgate",
     "  uv sync",
-    "  uv run pytest -q                                    229 passed",
+    "  uv run pytest -q                                    255 passed",
     "  uv run python -m rewardgate.report_real             $0.00",
     "  uv run python scripts/run_parity_ablation.py --replay",
     "",

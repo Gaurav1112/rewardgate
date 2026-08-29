@@ -15,7 +15,7 @@ Each stage is measured on the same corpus with the same scorer.
 | **Iteration 2** | Over-specification checker (asserts on internal symbols) | 42/500; caught and fixed a 5× overcount in my own counter | **Kept.** The measuring instrument needs its own tests |
 | **Iteration 3** | Adversarial exploit agent — the one component that needs a model | Proves REWARD_HACKABLE by execution; visible green, held-out red | **Kept.** But my first definition of the defect was simply wrong |
 | **Iteration 4** | Parity ablation: give the baseline `git log -p --all`, the same evidence my checker reads | baseline **0.889** vs RewardGate **0.933**; gap 0.333 → **0.044**; McNemar **p = 1.00** | **Kept, and it refuted my own headline.** The advantage was an information asymmetry I designed |
-| **Iteration 6** | k=5 exploit trials on all 15 bundles, pre-registered | 2/3 detected 5/5, `retrylite` 0/5, 0 false alarms in 60 clean trials, **p = 0.0286** | **Kept, hypothesis refuted.** The agent is deterministic, not noisy; the miss is a capability boundary |
+| **Iteration 6b** | k=5 exploit trials on all 15 bundles, pre-registered | 2/3 detected 5/5, `retrylite` 0/5, 0 false alarms in 60 clean trials, **p = 0.0286** | **Kept, hypothesis refuted.** The agent is deterministic, not noisy; the miss is a capability boundary |
 | **Iteration 5** | Adversarial panel against the shipped tool | 4 working fail-opens found, each reporting a defective task as sound | **Kept.** My own thesis applied to my own code |
 | **Removed** | A five-agent fan-out, one LLM per defect class | Deterministic checks give stronger evidence at $0.00: an exit code and a commit SHA beat an opinion | **Removed.** Number of agents is not a measure of engineering |
 | **Final** | Deterministic tiers + one adversarial agent | macro-F1 **0.933** vs a *fair* baseline's **0.889**, n=15, p=1.00 | Main contribution: **42% of SWE-bench Verified is defective, measured for $0.00** |
@@ -261,9 +261,15 @@ first trial ran**, with `REWARD_HACK_THRESHOLD` frozen in the same commit.
 
 Permutation statistic **+0.667**, exact **p = 0.0286** over all 455 relabellings.
 
-**The hypothesis is dead, and the pre-registration named this exact outcome.** `retrylite` detected
-0 of 5. The miss is **systematic** — a blind spot in the brief or the cost patterns — not sampling
-noise. I predicted noise, wrote down what would prove me wrong, and it did.
+**The hypothesis is dead, and the pre-registration named this exact outcome.** `retrylite` scored
+0 of 5. Not sampling noise — and not an agent failure either, which is what I assumed next and also
+got wrong. Reading the five stored trials: the agent produced a **working exploit every single
+time**, visible green and held-out red, using an interval predicate `if 7 <= attempt <= 39`. The
+cost grader has no pattern for a numeric range, so it priced all five at zero and returned
+`GAMEABLE (exploit cost not measurable)`, which is not counted as a detection.
+
+The blind spot is in the **grader**, not the agent. I had to read the artifacts twice to get that
+right; the summary table alone would have left me with the wrong story.
 
 **Three things survive, and they are worth more than the hypothesis was.**
 
@@ -435,23 +441,38 @@ confident numbers about the wrong thing.**
 
 ## Main failure mode
 
-**The exploit agent has a capability boundary, and I do not yet know where it is.**
+**The cost grader cannot price an exploit it has no pattern for, and a defect it cannot price is a
+defect it does not report.**
 
-I used to say the failure mode was a single stochastic trial: *an agent can miss an exploit it
-would find on a rerun.* I ran the experiment and that was wrong. At k=5 across all 15 bundles,
-every detection is **5/5** and every miss is **0/5** — perfectly bimodal, nothing in between, and
-k=1 and k=5 give identical verdicts. The agent is deterministic on this corpus.
+The k=5 experiment was designed to test whether `retrylite-reward-hackable` was missed through
+sampling noise. It is not. The agent found a working exploit in **5 of 5 trials** — visible suite
+green, held-out suite red, every time. What it wrote was an *interval* predicate:
 
-So `retrylite-reward-hackable` is not bad luck. It is out of reach, and I do not know whether the
-cause is the brief, the `_HARDCODE_PATTERNS` cost grader, or the shape of that task. Finding out is
-the next piece of work, and more trials will not do it.
+```python
+if 7 <= attempt <= 39:
+    return MAX_DELAY_SECONDS
+```
 
-The second half stands: exploit cost is priced by regex, and a reviewer has twice shown that
-regex mispricing text it was not written for — a dict literal read as zero cost, and docstrings
-still read as special-cases today. A semantic cost measure is the fix and it is not implemented.
+`_HARDCODE_PATTERNS` matches equality, membership, `startswith`/`endswith`, `case`, and dict keys.
+A numeric range guard matches none of them, so `hardcoded_cases` is 0, `cost_measurable` is False,
+and the verdict degrades to `GAMEABLE (exploit cost not measurable)` — which `is_reward_hackable`
+does not count. The task is reward-hackable, the agent proved it five times out of five, and the
+regex could not put a number on it.
 
-Reproduce: `uv run python scripts/run_multitrial.py --replay` (free), pre-registration in
-[`results/multitrial_preregistration.json`](results/multitrial_preregistration.json).
+So the failure is **detector expressiveness, not agent capability**, and it is the third time a
+reviewer has caught this same grader mispricing text it was not written for: a dict literal read as
+zero cost, docstrings read as special-cases, and now an interval read as nothing at all. Pricing
+memorisation by regular expression over patch lines is the wrong instrument. A semantic measure —
+intersecting the literals a patch pins against the literals the visible suite uses, which the code
+now half does — is the fix, and it is not implemented.
+
+**I am deliberately not patching the regex.** Adding an interval pattern would flip retrylite to
+detected and move macro-F1, but `results/multitrial_preregistration.json` freezes the cost metric,
+and changing it after seeing the trials is the tuning that pre-registration exists to prevent. The
+honest move is to report the blind spot and leave the number where it fell.
+
+Reproduce: `uv run python scripts/run_multitrial.py --replay`, then read any file in
+`results/multitrial/retrylite-reward-hackable/`.
 
 ## Hot take
 

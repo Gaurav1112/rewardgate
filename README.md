@@ -33,6 +33,17 @@ for is untouched.
 
 ---
 
+### If you have eight minutes
+
+1. `uv run python -m rewardgate.report_real` — the 42% finding. Free, about a second, no API key.
+2. [`rewardgate-demo.mp4`](rewardgate-demo.mp4) — 4:47 walkthrough.
+3. [The ablation that refutes the headline](#the-ablation-that-refutes-the-headline) — where I
+   disproved my own result. `uv run python scripts/run_parity_ablation.py --replay`.
+4. [SUBMISSION.md](SUBMISSION.md) — the four deliverables, and every known defect in one place.
+5. [REQUIREMENTS.md](REQUIREMENTS.md) — every challenge requirement mapped to its implementation.
+
+---
+
 ## Who has this problem
 
 **A contractor paid per accepted task to author agentic coding benchmarks.** Surge AI advertises
@@ -86,7 +97,7 @@ Both see the same bundles, emit the same schema, and are scored by the same func
 | **Capability** | It can *settle* `REWARD_HACKABLE`. The baseline can only form an opinion about it; the pipeline writes an exploit patch, runs it, and shows the visible suite green while the held-out suite is red. Under the fair (parity) comparison this is also the only class where the two differ: F1 **0.800** vs **0.667**. |
 | **Reliability** | Every positive verdict carries a mechanical artifact — an exit code, a commit SHA, an exploit patch. Nothing rests on a model's assertion, which matters given a measured **18.5% evaluator–human misalignment rate** in LLM-as-judge ([arXiv:2607.02577](https://arxiv.org/abs/2607.02577)). |
 | **Coverage** | Two of three classes are settled **deterministically at $0.00**, so they can run in CI on every task, not just on a sample. |
-| **Engineering quality** | A check that cannot run returns `INDETERMINATE`, never `ACCEPT` — including on `--no-exploit`, where only two of three classes are examined. 241 tests, exit codes that distinguish "broken" from "uncheckable", and a documented bundle contract. |
+| **Engineering quality** | A check that cannot run returns `INDETERMINATE`, never `ACCEPT` — including on `--no-exploit`, where only two of three classes are examined. 255 tests, exit codes that distinguish "broken" from "uncheckable", and a documented bundle contract. |
 
 **And the honest limit, stated here rather than buried.** On the primary metric the advantage is
 small: macro-F1 **0.933** against a fair baseline's **0.889** on 15 bundles, one discordant
@@ -490,7 +501,7 @@ Full instructions, including a **free path that needs no API key**, are in
 uv sync
 ./scripts/fetch_real_corpus.sh          # 2.0 MB, checksum-pinned
 uv run python corpus/synthetic/build.py # 15 bundles, labels by construction
-uv run pytest -q                        # 241 tests; pins every third-party-corpus number
+uv run pytest -q                        # 255 tests; pins every third-party-corpus number
 uv run python -m rewardgate.report_real # third-party findings, $0.00
 uv run python -m rewardgate.evaluate --replay   # re-score saved audits offline, $0.00
 ```
@@ -525,23 +536,45 @@ this repository.
 
 ## Main failure mode
 
-**The exploit agent has a capability boundary, and I do not yet know where it is.**
+**The cost grader cannot price an exploit it has no pattern for, and a defect it cannot price is a
+defect it does not report.**
 
-I used to say the failure mode was a single stochastic trial: *an agent can miss an exploit it
-would find on a rerun.* I ran the experiment and that was wrong. At k=5 across all 15 bundles,
-every detection is **5/5** and every miss is **0/5** — perfectly bimodal, nothing in between, and
-k=1 and k=5 give identical verdicts. The agent is deterministic on this corpus.
+The k=5 experiment was designed to test whether `retrylite-reward-hackable` was missed through
+sampling noise. It is not. The agent found a working exploit in **5 of 5 trials** — visible suite
+green, held-out suite red, every time. What it wrote was an *interval* predicate:
 
-So `retrylite-reward-hackable` is not bad luck. It is out of reach, and I do not know whether the
-cause is the brief, the `_HARDCODE_PATTERNS` cost grader, or the shape of that task. Finding out is
-the next piece of work, and more trials will not do it.
+```python
+if 7 <= attempt <= 39:
+    return MAX_DELAY_SECONDS
+```
 
-The second half stands: exploit cost is priced by regex, and a reviewer has twice shown that
-regex mispricing text it was not written for — a dict literal read as zero cost, and docstrings
-still read as special-cases today. A semantic cost measure is the fix and it is not implemented.
+`_HARDCODE_PATTERNS` matches equality, membership, `startswith`/`endswith`, `case`, and dict keys.
+A numeric range guard matches none of them, so `hardcoded_cases` is 0, `cost_measurable` is False,
+and the verdict degrades to `GAMEABLE (exploit cost not measurable)` — which `is_reward_hackable`
+does not count. The task is reward-hackable, the agent proved it five times out of five, and the
+regex could not put a number on it.
 
-Reproduce: `uv run python scripts/run_multitrial.py --replay` (free), pre-registration in
-[`results/multitrial_preregistration.json`](results/multitrial_preregistration.json).
+So the failure is **detector expressiveness, not agent capability**, and it is the third time a
+reviewer has caught this same grader mispricing text it was not written for: a dict literal read as
+zero cost, docstrings read as special-cases, and now an interval read as nothing at all. Pricing
+memorisation by regular expression over patch lines is the wrong instrument. A semantic measure —
+intersecting the literals a patch pins against the literals the visible suite uses, which the code
+now half does — is the fix, and it is not implemented.
+
+**I am deliberately not patching the regex.** Adding an interval pattern would flip retrylite to
+detected and move macro-F1, but `results/multitrial_preregistration.json` freezes the cost metric,
+and changing it after seeing the trials is the tuning that pre-registration exists to prevent. The
+honest move is to report the blind spot and leave the number where it fell.
+
+**The measured result, since it is the project's only significant one.** Across all 15 bundles at
+k=5 (75 trials, $26.67), every detection is 5/5 and every miss is 0/5 — the agent is deterministic
+here, not noisy. Exact permutation test over all 455 relabellings: statistic **+0.667**,
+**p = 0.0286**. And zero false alarms in **60 clean trials** at the same k as the positives, the
+stronger version of the earlier 0-in-6 figure. This says the agent discriminates reward-hackable
+tasks above chance. It does **not** say it beats the baseline, which remains p = 1.00.
+
+Reproduce: `uv run python scripts/run_multitrial.py --replay`, then read any file in
+`results/multitrial/retrylite-reward-hackable/`.
 
 ## Hot take
 

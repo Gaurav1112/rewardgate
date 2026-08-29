@@ -47,7 +47,7 @@ uv sync && ./scripts/fetch_real_corpus.sh
 uv run python -m rewardgate.report_real     # 210/500 (42.0%), $0.00, ~1s
 ```
 
-Then, if you want the whole thing: `uv run pytest -q` (241 tests) and
+Then, if you want the whole thing: `uv run pytest -q` (255 tests) and
 `uv run python scripts/run_parity_ablation.py --replay` (the ablation that refuted my own
 headline — free, under a second).
 
