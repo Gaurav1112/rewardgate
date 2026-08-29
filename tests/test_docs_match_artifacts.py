@@ -108,10 +108,23 @@ def test_the_challenging_cases_exploit_rate_is_four_of_five_not_five_of_five():
     gameable = sum(json.loads(p.read_text()).get("gameable") for p in trials)
     assert (gameable, len(trials)) == (4, 5), f"exploit rate changed: {gameable}/{len(trials)}"
 
+    # No document may *assert* 5 of 5. Quoting it in order to withdraw it is the opposite of
+    # asserting it, and the changelog is required to record exactly that — so the check is for a
+    # live claim, not for the characters. Retraction language within the preceding 400 characters
+    # is what distinguishes the two.
+    retracted = re.compile(
+        r"(withdrawn|what i claimed|earlier version|was wrong|it is \*\*4 of 5|"
+        r"the artifact says|refut)", re.IGNORECASE
+    )
     for doc in (README, EVALUATION, ROOT / "SUBMISSION.md", ROOT / "IMPROVEMENT_CHANGELOG.md"):
         text = doc.read_text()
-        assert "5 of 5 trials" not in text, f"{doc.name} still claims 5 of 5"
-        assert "five times out of five" not in text, f"{doc.name} still claims five out of five"
+        for claim in ("5 of 5 trials", "five times out of five", "5 times out of 5"):
+            for match in re.finditer(re.escape(claim), text):
+                window = text[max(0, match.start() - 400):match.start()]
+                assert retracted.search(window), (
+                    f"{doc.name} asserts '{claim}' at offset {match.start()} with no retraction "
+                    "in the preceding 400 characters"
+                )
 
 
 def test_exploit_generation_is_not_bimodal_even_though_detection_is():
