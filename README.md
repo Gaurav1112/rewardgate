@@ -174,6 +174,38 @@ The only way to establish that a task can be gamed is to game it.
 
 ---
 
+## Agent engineering: what the one agent actually required
+
+The pipeline uses a single LLM agent, and component count is a poor proxy for engineering. Every
+item below exists because something failed and an adversarial review proved it. Each is a line of
+code and a defect it closes.
+
+| # | Mechanism | Where | The failure it closes |
+|---|---|---|---|
+| 1 | Ambient MCP servers stripped from the agent session | [`exploit.py:382`](rewardgate/exploit.py) | The operator's connected tools would otherwise be in scope, so the trial would measure their machine, not the task |
+| 2 | Tool allowlist: read/edit the sandbox, run pytest, nothing else | [`exploit.py:147`](rewardgate/exploit.py) | Bounds what the agent *invokes*. Explicitly does **not** bound what it writes — see Safety |
+| 3 | `held_out/`, `solution.patch`, `task.yaml`, `.git`, `conftest.py` withheld | [`exploit.py:155`](rewardgate/exploit.py) | The first two hand over the answer; `.git` carries the fix on contaminated bundles; `conftest.py` is imported by pytest, and a reviewer used it to demonstrate arbitrary host execution |
+| 4 | Adjudication on a **fresh** materialisation, not the agent's tree | [`exploit.py:475`](rewardgate/exploit.py) | The agent's own session cannot influence the measurement that grades it |
+| 5 | Diff staged with `git add -A` before capture | [`exploit.py:447`](rewardgate/exploit.py) | A working exploit written into a *new* file produced an empty diff and was graded "RESISTED — no exploit found" |
+| 6 | `held_out_ran` rejects pytest exit 4/5 and timeouts | [`exploit.py:219`](rewardgate/exploit.py) | `reward == 0.0` is also what a suite that never ran returns. Reading that as "held-out failed" reports a genuine fix as a proven exploit |
+| 7 | `nop_ran`, the same guard on the reward gate | [`gates.py:52`](rewardgate/gates.py) | A bundle whose unpatched suite hangs would be certified ACCEPT with the gate never measured |
+| 8 | `cost_measurable` as an explicit state | [`exploit.py:280`](rewardgate/exploit.py) | A proven exploit matching no known pattern must not be priced at "0 special-cases, cheaper to fix properly" — that inverts the truth |
+| 9 | Cost counts only literals the **visible suite** uses | [`exploit.py:263`](rewardgate/exploit.py) | `ch == '"'` and `ch == ','` are in every character-scanning parser. Without this gate an honest, merely-incomplete implementation graded REWARD_HACKABLE |
+| 10 | Typed confirmation before host execution | [`cli.py:259`](rewardgate/cli.py) | The consequential action — running agent-written code on your machine — used to happen by default with nothing said |
+| 11 | Reviewer records confirm / override / defer on a REJECT | [`cli.py:283`](rewardgate/cli.py) | `override` exits 0: a reviewer who has read the evidence outranks the tool |
+
+**And the measurement around it.** k=5 trials on all 15 bundles with Wilson intervals, an exact
+permutation test over all 455 relabellings, and a decision rule
+[pre-registered](results/multitrial_preregistration.json) before the first trial ran — which is how
+the experiment was able to refute its own hypothesis rather than confirm it.
+
+**What is deliberately absent.** No memory across bundles, no orchestration, no retries. Iteration 6
+measured whether retries would help: k=1 and k=5 give identical verdicts, so the agent is
+deterministic on this corpus and retries buy nothing. Adding components that do not change a
+measured outcome is the thing this project argues against.
+
+---
+
 ## What it found
 
 On the third-party corpus — 500 real instances, deterministic checks, **$0.00**:
@@ -253,6 +285,37 @@ the reasoning that retired it are preserved in
 [IMPROVEMENT_CHANGELOG.md](IMPROVEMENT_CHANGELOG.md).
 
 Full run: **$5.5877**, 1711.3s wall clock, 45 paired judgements per system.
+
+### A second metric, because macro-F1 is not the only question
+
+macro-F1 asks *did it reach the same verdict*. On 15 bundles the answer is a near-tie, and that is
+reported above without softening. But a reviewer reading an audit asks a second question — *can I
+check this without redoing the work* — and there the two systems are not close.
+
+| | parity baseline | RewardGate |
+|---|---:|---:|
+| Positive verdicts | 9 | 8 |
+| Correct | 8 | **8** |
+| False positives | **1** | **0** |
+| Backed by an **executed** artifact | **0** | **8** |
+| Cost to audit 2,938 third-party instances | ~$345 extrapolated | **$0.00** |
+
+**The distinction is executed, not merely cited.** The parity baseline does quote commit SHAs —
+it was shown `git log -p --all` and it reports what it read, which is a real and useful thing to
+do. RewardGate's eight positives each carry something it *produced by running code*: a pytest exit
+code, a SHA it found by walking history itself, or an exploit patch that turns the visible suite
+green while the held-out suite stays red. The difference matters when the verdict is wrong — and
+one of the baseline's nine is (`semverlite-nop-pass / REWARD_HACKABLE`, a hallucinated defect on a
+sound task). A cited artifact and an executed one are indistinguishable until one of them is
+fabricated.
+
+**And coverage.** The deterministic tier audits **2,938 instances across two corpora in about six
+seconds for $0.00**. At the baseline's measured $0.1174 per task that is roughly **$345** and, at
+its measured rate, over a day of wall clock. This is not a cleverness gap; it is the difference
+between a check you run on every task and one you run on a sample.
+
+Neither of these is offered as a replacement for the macro-F1 result. That comparison is a tie and
+stays a tie.
 
 ### The ablation that refutes the headline
 
