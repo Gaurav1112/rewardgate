@@ -101,7 +101,7 @@ Both see the same bundles, emit the same schema, and are scored by the same func
 | **Reliability** | Every positive verdict carries a mechanical artifact — an exit code, a commit SHA, an exploit patch. Nothing rests on a model's assertion, which matters given a measured **18.5% evaluator–human misalignment rate** in LLM-as-judge ([arXiv:2607.02577](https://arxiv.org/abs/2607.02577)). |
 | **Coverage** | Two of three classes are settled **deterministically at $0.00**, so they can run in CI on every task, not just on a sample. |
 | **Safety** | `--docker` runs every test execution in a network-less, non-root container — [measured both ways](docs/SANDBOXING.md#measured-not-asserted), not asserted. |
-| **Engineering** | A check that cannot run returns `INDETERMINATE`, never `ACCEPT` — including on `--no-exploit`, where only two of three classes are examined. 300 tests, exit codes that distinguish "broken" from "uncheckable", and a documented bundle contract. |
+| **Engineering** | A check that cannot run returns `INDETERMINATE`, never `ACCEPT` — including on `--no-exploit`, where only two of three classes are examined. A full test suite, exit codes that distinguish "broken" from "uncheckable", and a documented bundle contract. |
 
 **And the honest limit, stated here rather than buried.** On the primary metric the advantage is
 small: macro-F1 **0.933** against a fair baseline's **0.889** on 15 bundles, one discordant
@@ -371,7 +371,7 @@ Full instructions, including a **free path that needs no API key**, are in
 uv sync
 ./scripts/fetch_real_corpus.sh          # 2.0 MB, checksum-pinned
 uv run python corpus/synthetic/build.py # 15 bundles, labels by construction
-uv run pytest -q                        # 300 tests, 0 failed; pins every third-party number
+uv run pytest -q                        # 0 failed; pins every third-party number
 uv run python -m rewardgate.report_real # third-party findings, $0.00
 uv run python -m rewardgate.evaluate --replay   # re-score saved audits offline, $0.00
 ```

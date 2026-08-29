@@ -73,9 +73,9 @@ on this machine**, so in a terminal it first requires you to type `yes`; `--yes`
 uv run pytest -q
 ```
 
-Expected: **300 tests collected, 0 failed**, in roughly 10–20 seconds.
+Expected: **0 failed**, in roughly 10–20 seconds.
 
-How many of the 300 *run* depends on optional prerequisites, so the pass count is not a single
+How many tests *run* depends on optional prerequisites, so the pass count is not a single
 number and this guide will not pretend it is. All three of these were observed:
 
 | State | Skipped |

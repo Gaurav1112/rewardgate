@@ -210,3 +210,23 @@ def test_documented_test_count_is_current(collected_test_count):
     assert not wrong, (
         f"suite has {collected_test_count} tests; these documents say otherwise: {wrong}"
     )
+
+
+def test_the_rendered_video_is_not_stale(collected_test_count):
+    """The mp4's closing card quotes the test count, and no other check can read an mp4.
+
+    `scripts/video/build.py` was corrected to the right number and the video was not re-rendered,
+    so the committed mp4 showed one count while every document showed another — invisible to the
+    documentation pin, which reads source files. `build.py` now writes a manifest recording what
+    the render actually asserted; this compares it against the live suite.
+    """
+    manifest = ROOT / "scripts" / "video" / "render_manifest.json"
+    assert manifest.exists(), "video never rendered by build.py; run scripts/video/build.py"
+    shown = json.loads(manifest.read_text())["test_count_shown_on_closing_card"]
+    if shown is None:
+        return  # the closing card quotes no count, so there is nothing that can go stale
+    assert shown == collected_test_count, (
+        f"the rendered video says {shown} tests, the suite has {collected_test_count}. "
+        "Re-render: uv run --with pillow python scripts/video/build.py && "
+        "uv run --with pillow python scripts/video/compose.py"
+    )

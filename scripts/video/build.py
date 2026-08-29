@@ -6,6 +6,7 @@ commands, not retyped. The narration is the committed teleprompter text, unedite
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import textwrap
 from pathlib import Path
@@ -33,6 +34,22 @@ F_TITLE, F_BODY, F_SMALL, F_HUGE = mono(46), mono(26), mono(21), mono(84)
 
 def cap(name: str) -> list[str]:
     return (CAP / name).read_text().splitlines()
+
+
+def write_manifest() -> None:
+    """Record what this render asserted, so a stale video fails the suite rather than shipping.
+
+    The closing card quotes the test count. `build.py` was corrected to 300 and the mp4 was not
+    re-rendered, so the committed video showed 296 while every document said 300 — and the
+    documentation pin could not see it, because it reads source files and not an mp4. This manifest
+    is the bridge: `tests/test_docs_match_artifacts.py` compares it against the live count.
+    """
+    quoted = [int(n) for line in LANDING[1]
+              for n in re.findall(r"(\d{3})\s+collected", line)]
+    (HERE / "render_manifest.json").write_text(
+        json.dumps({"test_count_shown_on_closing_card": quoted[0] if quoted else None}, indent=2)
+        + "\n"
+    )
 
 
 def grep(name: str, *needles: str, limit: int = 40) -> list[str]:
@@ -265,7 +282,7 @@ LANDING = ("Reproduction", [
     "  uv sync",
     "  ./scripts/fetch_real_corpus.sh                      2.0 MB, pinned",
     "  uv run python corpus/synthetic/build.py             15 bundles",
-    "  uv run pytest -q                        300 collected, 0 failed",
+    "  uv run pytest -q                                  0 failed",
     "  uv run python -m rewardgate.report_real             $0.00",
     "  uv run python scripts/run_parity_ablation.py --replay",
     "",
@@ -309,6 +326,7 @@ def main() -> None:
          "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac", "-movflags", "+faststart",
          str(final)], check=True,
     )
+    write_manifest()
     print(f"\nwrote {final}")
 
 
