@@ -509,6 +509,7 @@ uv run rewardgate audit path/to/my-task --no-exploit
 - [IMPROVEMENT_CHANGELOG.md](IMPROVEMENT_CHANGELOG.md) — what changed, why, and what was removed
 - [REPRODUCTION.md](REPRODUCTION.md) — clean-environment setup, measured cost and runtime
 - [AGENT_TRAJECTORIES.md](AGENT_TRAJECTORIES.md) — every agent, end to end
+- [REQUIREMENTS.md](REQUIREMENTS.md) — every challenge requirement mapped to its implementation
 - [docs/BUNDLE_FORMAT.md](docs/BUNDLE_FORMAT.md) — the bundle contract, for auditing your own tasks
 - [docs/specs/](docs/specs/) — design specification
 

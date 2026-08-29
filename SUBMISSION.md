@@ -20,6 +20,9 @@ roughly this common, not a reproduction of their number. Every
 positive verdict carries a mechanical artifact: a test exit code, a commit SHA, or an exploit patch
 that turns the visible suite green while the bug the task tests for is untouched.
 
+**Requirement-by-requirement mapping:** [REQUIREMENTS.md](REQUIREMENTS.md) — every stated rule
+and deliverable against where it is met, with the declared gaps in one place.
+
 ## The four deliverables
 
 | # | Item | Where |
