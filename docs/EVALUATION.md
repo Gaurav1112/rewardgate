@@ -3,6 +3,42 @@
 The README states the result and the ablation that refutes it. This is the long version: how the
 comparison is set up, why the numbers are not circular, and the case both systems miss.
 
+## What a good result looks like, for the person who has the problem
+
+Stated here because the challenge asks for it, and stated with its date because that matters more
+than the definition. **This was written after the evaluation ran, not before.** The one thing in
+this project that *was* fixed in advance is
+[`results/multitrial_preregistration.json`](../results/multitrial_preregistration.json) — the
+decision rule and refutation conditions for the k=5 experiment, committed before the first trial,
+which is how that experiment was able to come back against its own hypothesis. Backdating a target
+for the main evaluation would be the exact move pre-registration exists to prevent, so the target
+is given as a yardstick for the reader rather than dressed up as a prior commitment.
+
+The user is a contractor paid per **accepted** task. Their outcome is not F1. It is: *how many
+tasks would I have submitted with a defect in them, and how many good ones would this thing waste
+my time on?* A useful result would be:
+
+| Target | Result |
+|---|---|
+| Catches most defective tasks before submission | **8 of 9 (89%)** |
+| Almost never flags a sound one | **0 false alarms on 6 clean bundles** |
+| Cheap enough to run on every task, not a sample | 2 of 3 classes at **$0.00**; the third ~$0.26 |
+| The verdict can be checked without redoing the work | 8 of 8 positives carry an executed artifact |
+
+**And the honest part: the first two rows are a tie.** The parity baseline also catches 8 of 9 with
+0 false alarms on the same bundles — computed from
+[`results/baseline_parity_audits.json`](../results/baseline_parity_audits.json) against
+`labels.yaml`. On the user-outcome question of *would this have caught it*, an LLM shown the right
+`git` output does as well as the pipeline on this corpus.
+
+That is the fourth independent measurement in this project to come back a tie or worse — after
+macro-F1, the parity ablation, and human time per task. The pattern is the finding: on 15 small
+self-authored tasks, the agent tier does not raise the catch rate. What it changes is rows three
+and four — the cost of running it on everything, and whether the verdict arrives with something a
+reviewer can execute.
+
+---
+
 15 bundles × 3 defect classes = **45 binary judgements** per system. Identical cases, identical
 output schema, identical scorer. All figures come from [`results/summary.json`](../results/summary.json).
 

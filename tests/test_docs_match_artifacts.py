@@ -142,3 +142,29 @@ def test_no_trajectory_exists_for_the_challenging_case():
     admission becomes false and must be removed."""
     captured = {p.stem for p in (ROOT / "trajectories").glob("exploit-agent-*")}
     assert not any("retrylite" in name for name in captured)
+
+
+def test_the_user_outcome_metric_matches_the_audits():
+    """The README's user-outcome table is computed, not asserted.
+
+    Both systems catch 8 of 9 and raise 0 false alarms on 6 clean bundles. That tie is the
+    project's honest headline, so it is derived from the committed audits here rather than left as
+    prose someone could quietly improve.
+    """
+    import yaml
+
+    labels = ROOT / "corpus" / "synthetic" / "bundles" / "labels.yaml"
+    if not labels.exists():
+        pytest.skip("run: uv run python corpus/synthetic/build.py")
+    truth = {b["id"]: set(b["defects"]) for b in yaml.safe_load(labels.read_text())["bundles"]}
+
+    def load(name):
+        payload = json.loads((ROOT / "results" / name).read_text())
+        audits = payload["audits"] if isinstance(payload, dict) and "audits" in payload else payload
+        return {a["bundle_id"]: a for a in audits}
+
+    for name in ("rewardgate_audits.json", "baseline_parity_audits.json"):
+        audits = load(name)
+        caught = sum(1 for b in truth if truth[b] and any(audits[b]["defects"].values()))
+        alarms = sum(1 for b in truth if not truth[b] and any(audits[b]["defects"].values()))
+        assert (caught, alarms) == (8, 0), f"{name}: caught {caught}/9, {alarms} false alarms"

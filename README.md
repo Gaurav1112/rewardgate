@@ -238,6 +238,23 @@ while the bug it tests for is untouched.
 
 ## Measured improvement
 
+**What a good result looks like for the user**, stated before the tables rather than after. The
+user is a contractor paid per *accepted* task, so their outcome is not F1 — it is how many
+defective tasks they would have shipped, and how many sound ones this wastes their time on:
+
+| Target | RewardGate | parity baseline |
+|---|---:|---:|
+| Defective tasks caught before submission | **8 / 9** | **8 / 9** |
+| False alarms on sound tasks | **0 / 6** | **0 / 6** |
+| Runs on every task, not a sample | 2 of 3 classes at **$0.00** | $0.1174/task, API key required |
+| Verdict checkable without redoing the work | **8 / 8** carry an executed artifact | 0 / 9 |
+
+The first two rows tie. That is the honest headline of this project and the fourth measurement to
+come back that way. The bottom two are where the difference is real. Note the target was written
+*after* the evaluation — the only genuinely pre-registered thing here is the
+[k=5 decision rule](results/multitrial_preregistration.json), and
+[docs/EVALUATION.md](docs/EVALUATION.md) says so rather than backdating.
+
 15 bundles × 3 defect classes = **45 binary judgements** per system, identical cases, identical
 scorer. **[docs/EVALUATION.md](docs/EVALUATION.md) is the full version**, including why the numbers
 are not circular and the case both systems miss. The two results that matter:
