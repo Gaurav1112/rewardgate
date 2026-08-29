@@ -15,6 +15,7 @@ import json
 import subprocess
 from pathlib import Path
 
+from rewardgate.exploit import agent_env
 from rewardgate.schema import Audit, parse_audit, schema_instructions
 
 DEFAULT_MODEL = "claude-sonnet-4-5-20250929"
@@ -96,6 +97,7 @@ def audit_bundle(bundle_dir: Path, model: str = DEFAULT_MODEL, parity: bool = Fa
                 "--disallowedTools", "Bash", "Read", "Edit", "Write", "Glob", "Grep", "WebFetch",
             ],
             capture_output=True, text=True, timeout=TIMEOUT_SECONDS, check=False,
+            env=agent_env(),
         )
     except subprocess.TimeoutExpired:
         return Audit.empty(bundle_id, error=f"baseline exceeded {TIMEOUT_SECONDS}s")

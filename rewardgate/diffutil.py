@@ -14,9 +14,34 @@ _DIFF_HEADER = re.compile(r"^diff --git a/(\S+)", re.MULTILINE)
 _FILE_MARKER = re.compile(r"^(\+\+\+|---)\s")
 
 
+# `+++ b/path` is the authoritative statement of which file a hunk writes to, and every unified
+# diff has one. `diff --git` does not: POSIX `diff -u`, `git diff --no-prefix` and hand-written
+# patches omit it entirely.
+_PLUS_MARKER = re.compile(r'^\+\+\+ (?:b/)?("(?:[^"\\]|\\.)*"|\S.*?)(?:\t.*)?$', re.MULTILINE)
+
+
 def files_in_patch(patch: str | None) -> set[str]:
-    """Return the set of repository paths a unified diff modifies."""
-    return set(_DIFF_HEADER.findall(patch or ""))
+    r"""Repository paths a unified diff writes to.
+
+    Reads `+++ b/...` rather than `diff --git a/...`. The old implementation matched only the git
+    header with `\S+`, which meant: a POSIX `diff -u` patch returned the empty set, a path with a
+    space returned its first word, and a rename returned the *old* path while the added lines live
+    in the new one.
+
+    That became load-bearing when contamination scoping started depending on it: an empty set means
+    nothing is subtracted from the fingerprint, which resurrects the false-REJECT-on-a-clean-bundle
+    regression the subtraction exists to prevent. A parser that silently returns nothing is worse
+    than one that raises.
+    """
+    text = patch or ""
+    found = {
+        m.group(1)[1:-1].encode().decode("unicode_escape") if m.group(1).startswith('"')
+        else m.group(1)
+        for m in _PLUS_MARKER.finditer(text)
+    }
+    found.discard("/dev/null")
+    # Fall back to the git header for diffs that declare files but add no lines (deletion-only).
+    return {f.strip() for f in found if f.strip()} or set(_DIFF_HEADER.findall(text))
 
 
 def added_lines(patch: str | None) -> list[str]:

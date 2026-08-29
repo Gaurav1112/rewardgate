@@ -374,3 +374,74 @@ def test_a_check_that_could_not_run_renders_BLOCKED_not_ok(tmp_path, capsys):
     out = capsys.readouterr().out
     assert "[BLOCKED] NOP_PASS" in out
     assert "[  ok   ] NOP_PASS" not in out
+
+
+# --- the diff parser now gates a security property -------------------------------------
+
+@pytest.mark.parametrize(
+    "label,patch,expected",
+    [
+        ("git", "diff --git a/src/m.py b/src/m.py\n--- a/src/m.py\n+++ b/src/m.py\n@@ -1 +1 @@\n+x\n", {"src/m.py"}),
+        ("posix diff -u", "--- src/m.py\t2026-01-01\n+++ src/m.py\t2026-01-02\n@@ -1 +1 @@\n+x\n", {"src/m.py"}),
+        ("path with space", "diff --git a/my file.py b/my file.py\n--- a/my file.py\n+++ b/my file.py\n@@ -1 +1 @@\n+x\n", {"my file.py"}),
+        ("rename", "diff --git a/old.py b/new.py\n--- a/old.py\n+++ b/new.py\n@@ -1 +1 @@\n+x\n", {"new.py"}),
+        ("no prefix", "--- m.py\n+++ m.py\n@@ -1 +1 @@\n+x\n", {"m.py"}),
+    ],
+)
+def test_the_diff_parser_handles_the_formats_people_actually_produce(label, patch, expected):
+    """`files_in_patch` scopes which shipped lines get subtracted from the contamination
+    fingerprint, so a path it fails to parse silently disables that guard and resurrects the
+    false-REJECT-on-a-clean-bundle regression.
+
+    The old implementation matched only `diff --git a/(\\S+)`: POSIX `diff -u` returned nothing,
+    a path with a space returned its first word, and a rename returned the OLD path while the
+    added lines live in the new one.
+    """
+    from rewardgate.diffutil import files_in_patch
+
+    assert files_in_patch(patch) == expected, label
+
+
+def test_dev_null_is_not_a_file():
+    """A creation or deletion hunk names /dev/null on one side; treating it as a path would send
+    the contamination checker looking for a file that cannot exist."""
+    from rewardgate.diffutil import files_in_patch
+
+    created = "diff --git a/new.py b/new.py\n--- /dev/null\n+++ b/new.py\n@@ -0,0 +1 @@\n+x\n"
+    assert files_in_patch(created) == {"new.py"}
+
+
+@pytest.mark.parametrize(
+    "secret", ["GH_TOKEN", "AWS_SECRET_ACCESS_KEY", "SSH_AUTH_SOCK", "SENDGRID_API_KEY",
+               "AUTH0_CLIENT_SECRET", "NPM_AUTH_TOKEN"]
+)
+def test_the_agent_cli_does_not_inherit_the_operators_shell(secret):
+    """`execution._test_env()` allowlisted the adjudication subprocess, but the two sites that
+    invoke the `claude` CLI passed no `env=` at all — so the agent session inherited everything,
+    and since it holds `Bash(python -m pytest:*)`, so did anything it launched.
+
+    A denylist can only enumerate what its author thought of. This machine carried GH_TOKEN,
+    AUTH0_CLIENT_SECRET, SENDGRID_API_KEY and a live SSH_AUTH_SOCK that can sign as the user.
+    """
+    from rewardgate.exploit import agent_env
+
+    os.environ[secret] = "leaked"
+    try:
+        assert secret not in agent_env()
+    finally:
+        os.environ.pop(secret, None)
+
+
+def test_the_agent_still_gets_what_the_cli_needs_to_run():
+    """An allowlist that starves the CLI would make every trial fail identically, which reads as
+    'the task is unsolvable' rather than 'the harness is broken'."""
+    from rewardgate.exploit import agent_env
+
+    env = agent_env()
+    assert "PATH" in env and "HOME" in env
+    for name in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "CLAUDE_CONFIG_DIR"):
+        os.environ[name] = "present"
+        try:
+            assert name in agent_env(), f"{name} must reach the CLI or authentication breaks"
+        finally:
+            os.environ.pop(name, None)

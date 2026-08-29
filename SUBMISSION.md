@@ -83,17 +83,21 @@ four round-5 exploits defeated round-4 fixes. An unverified late fix is worse th
   executes it, so module-scope code in that patch runs on the host. Disclosed, not mitigated.
 - Representative trajectories exist for the three agents that ship inside the product. The
   development-time agents are documented as reconstructions, and labelled as such.
-- **Five implementation defects in the detector family, confirmed with executed reproductions and
-  left unfixed.** They share one cause: fingerprinting and cost-pricing are done by matching source
-  text, which is too literal an instrument for the question being asked.
-  (i) The environment allowlist covers the harness, not the agent session — `exploit._run_agent`
-  and `baseline.audit_bundle` invoke the CLI with no `env=`.
-  (ii) The contamination scope set is read from the audited patch, so a planted decoy file erases
+- **Three implementation defects, confirmed with executed reproductions and left unfixed.** Two of
+  the five originally listed here have since been fixed and pinned by regression tests: the
+  environment allowlist now covers all three subprocess invocation sites, not just the harness
+  (`exploit.agent_env`, six secrets asserted absent); and `files_in_patch` now reads `+++ b/...`
+  rather than the git header alone, so POSIX `diff -u`, paths with spaces, renames and
+  `--no-prefix` all parse — previously they returned nothing or the wrong path, silently disabling
+  the contamination scope guard.
+
+  What remains, sharing one cause — fingerprinting and cost-pricing match source text, which is too
+  literal an instrument for the question being asked:
+  (i) The contamination scope set is read from the audited patch, so a planted decoy file erases
   the fingerprint.
-  (iii) Exploit cost ignores `#` comments but not docstrings.
-  (iv) `files_in_patch` parses only the `diff --git` header form, silently disabling (ii)'s guard.
-  (v) A bundle shipping a `.gitignore` containing `src/` makes every captured diff empty, so every
-  exploit reports as "RESISTED".
+  (ii) Exploit cost ignores `#` comments but not docstrings.
+  (iii) A bundle shipping a `.gitignore` containing `src/` makes every captured diff empty, so
+  every exploit reports as "RESISTED".
 
   Documented rather than patched: the measured regression rate on this repository's
   security-hardening edits ran at roughly one in two across two review rounds, so an unverified late
