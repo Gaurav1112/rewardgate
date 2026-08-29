@@ -83,6 +83,42 @@ stays a tie.
 
 ---
 
+## Human time per task — the third row, and it does not favour this tool
+
+The challenge's suggested comparison table has three rows: primary outcome, **human time per task**,
+and cost per task. Two were reported and the third was not, so it is measured here.
+
+`uv run python scripts/measure_human_time.py` times the commands a reviewer cannot avoid running to
+check one task by hand — the suite unpatched, the gold patch applied and reverted, a history scan —
+against `audit_bundle(run_exploit=False)` on the same 15 bundles.
+
+| | manual floor | RewardGate |
+|---|---:|---:|
+| per task | **0.17s** | 0.26s |
+| 15 tasks | **2.52s** | 3.91s |
+
+**The tool is slower, by about 50%.** It materialises each bundle twice so the oracle's applied
+patch cannot leak into the no-op measurement, and it walks every ref rather than one branch. Those
+are correctness choices and removing them would be a regression, but they are not free.
+
+Two things this number is not. It is a **floor**, not human time: it is what the task costs someone
+who types instantly, reads nothing and decides nothing. No reviewer was timed, so the gap between
+the floor and real human time is not estimated here. And neither column covers `REWARD_HACKABLE` —
+a reviewer cannot settle that by hand at all without writing an exploit.
+
+So on a single task, this tool's value is **not** time saved, and the honest statement is that it
+costs a tenth of a second more. What it buys is that the right commands run every time without the
+reviewer having to know which ones they are, and that the verdict arrives attached to an artifact.
+Where time does become decisive is at a scale the manual process does not reach: the deterministic
+text tier audits 2,938 third-party instances for $0.00, and no reviewer is going to hand-check
+2,938 tasks at any speed.
+
+That is the third independent attempt in this project to demonstrate an advantage — after macro-F1
+and the parity ablation — and the third to come back neutral or negative. Artifact:
+[`results/human_time.json`](../results/human_time.json).
+
+---
+
 ## The ablation that refutes the headline
 
 Two reviewers independently said the same thing: the baseline is shown `git log --oneline`, while

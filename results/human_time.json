@@ -1,0 +1,86 @@
+{
+  "what_this_measures": "Wall clock of the commands a reviewer cannot avoid running to check one task by hand: the suite unpatched, the gold patch applied and reverted, and a history scan. It is a FLOOR, not human time -- it excludes typing, reading and deciding. No reviewer was timed, so no estimate of that overhead is reported.",
+  "what_neither_side_covers": "REWARD_HACKABLE. A reviewer cannot settle it by hand at all without writing an exploit, and the free tier does not attempt it. Both columns are the two deterministic classes.",
+  "tasks": 15,
+  "manual_floor_total_s": 2.52,
+  "rewardgate_total_s": 3.91,
+  "manual_floor_per_task_s": 0.17,
+  "rewardgate_per_task_s": 0.26,
+  "per_bundle": [
+    {
+      "bundle_id": "csvlite-clean",
+      "manual_floor_s": 0.17,
+      "rewardgate_s": 0.28
+    },
+    {
+      "bundle_id": "csvlite-clean-git-history",
+      "manual_floor_s": 0.19,
+      "rewardgate_s": 0.24
+    },
+    {
+      "bundle_id": "csvlite-contaminated-git",
+      "manual_floor_s": 0.19,
+      "rewardgate_s": 0.3
+    },
+    {
+      "bundle_id": "csvlite-nop-pass",
+      "manual_floor_s": 0.15,
+      "rewardgate_s": 0.29
+    },
+    {
+      "bundle_id": "csvlite-reward-hackable",
+      "manual_floor_s": 0.17,
+      "rewardgate_s": 0.29
+    },
+    {
+      "bundle_id": "retrylite-clean",
+      "manual_floor_s": 0.17,
+      "rewardgate_s": 0.27
+    },
+    {
+      "bundle_id": "retrylite-clean-git-history",
+      "manual_floor_s": 0.18,
+      "rewardgate_s": 0.23
+    },
+    {
+      "bundle_id": "retrylite-contaminated-git",
+      "manual_floor_s": 0.18,
+      "rewardgate_s": 0.28
+    },
+    {
+      "bundle_id": "retrylite-nop-pass",
+      "manual_floor_s": 0.15,
+      "rewardgate_s": 0.26
+    },
+    {
+      "bundle_id": "retrylite-reward-hackable",
+      "manual_floor_s": 0.17,
+      "rewardgate_s": 0.27
+    },
+    {
+      "bundle_id": "semverlite-clean",
+      "manual_floor_s": 0.17,
+      "rewardgate_s": 0.25
+    },
+    {
+      "bundle_id": "semverlite-clean-git-history",
+      "manual_floor_s": 0.17,
+      "rewardgate_s": 0.22
+    },
+    {
+      "bundle_id": "semverlite-contaminated-git",
+      "manual_floor_s": 0.18,
+      "rewardgate_s": 0.26
+    },
+    {
+      "bundle_id": "semverlite-nop-pass",
+      "manual_floor_s": 0.14,
+      "rewardgate_s": 0.23
+    },
+    {
+      "bundle_id": "semverlite-reward-hackable",
+      "manual_floor_s": 0.14,
+      "rewardgate_s": 0.24
+    }
+  ]
+}

@@ -15,7 +15,7 @@ from pathlib import Path
 
 from rewardgate.checkers.assertions import analyze_test_assertions
 from rewardgate.checkers.hints import detect_hint_contamination
-from rewardgate.checkers.leakage import detect_solution_leakage
+from rewardgate.checkers.leakage import detect_solution_leakage, named_only_in_traceback
 from rewardgate.checkers.overspec import detect_over_specification
 from rewardgate.corpus import load_real_corpus
 
@@ -54,6 +54,14 @@ def main() -> None:
         "mine counts basenames)")
     print(line("solution leakage (gold file named)", leaked, note=note))
     print(line("  of which full path (high conf.)", sum(f.confidence == "high" for f in leakage)))
+    # The checker's weakest case, separated rather than defended: the gold file appears only inside
+    # a pasted stack trace. The reporter pasted what their console printed; they did not point at
+    # the fix. Both readings are defensible, so both numbers are printed and the reader picks.
+    traceback_only = sum(
+        named_only_in_traceback(b.problem_statement, f) for b, f in zip(bundles, leakage)
+    )
+    print(line("  of which named ONLY in a traceback", traceback_only,
+               note="arguably not authored leakage — see below"))
     print(line("over-specified (internal symbol)", sum(f.over_specified for f in overspec)))
     print(line("  high severity (symbol + file)", sum(f.severity == "high" for f in overspec)))
     print(line("hint text present", sum(f.hints_present for f in hints)))
@@ -70,8 +78,17 @@ def main() -> None:
         or hints[i].contaminated
         or assertions[i].has_weak_assertions
     )
+    strict = sum(
+        1
+        for i in range(total)
+        if (leakage[i].leaked and not named_only_in_traceback(bundles[i].problem_statement, leakage[i]))
+        or overspec[i].over_specified
+        or hints[i].contaminated
+        or assertions[i].has_weak_assertions
+    )
     print("-" * 78)
     print(line("AT LEAST ONE DEFECT", flagged))
+    print(line("  strict: traceback-only leakage excluded", strict))
     print(line("clean on all four checks", total - flagged))
 
     print(
@@ -93,7 +110,9 @@ def main() -> None:
         "hint_contamination": sum(f.contaminated for f in hints),
         "weak_assertions": sum(r.has_weak_assertions for r in parsed),
         "assertion_parse_coverage": len(parsed),
+        "leakage_named_only_in_traceback": traceback_only,
         "at_least_one_defect": flagged,
+        "at_least_one_defect_strict": strict,
     }, indent=2))
     print(f"\nsaved -> {out}")
 

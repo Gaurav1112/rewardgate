@@ -137,7 +137,7 @@ Read it flat. Short sentences. Do not perform the reversals as apologies. They a
 **Landing card, 4:42 to 4:46, silent, not read aloud:**
 
 ```
-294 tests pass
+290 passed, 4 skipped
 github.com/Gaurav1112/rewardgate
 ```
 
@@ -479,12 +479,12 @@ better over the `$0.00` column than over a title card.
 **4:42–4:46, landing card.** Cut to a plain slide:
 
 ```
-294 tests pass
+290 passed, 4 skipped
 github.com/Gaurav1112/rewardgate
 ```
 
-If you would rather prove the 294 than assert it, run `uv run pytest -q` and hold on
-`294 passed in ~14s`. **This is the one command in the video that takes about ten seconds.** Only
+If you would rather prove it rather than assert it, run `uv run pytest -q` and hold on
+`290 passed, 4 skipped`. **This is the one command in the video that takes about ten seconds.** Only
 do it if you are under 4:30 at that point, and run it once before recording so the import cache is
 warm.
 

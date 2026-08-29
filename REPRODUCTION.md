@@ -73,7 +73,9 @@ on this machine**, so in a terminal it first requires you to type `yes`; `--yes`
 uv run pytest -q
 ```
 
-Expected: `294 passed`, in roughly 10–16 seconds.
+Expected: `290 passed, 4 skipped`, in roughly 10–16 seconds. The 4 skips are the container tests;
+they run only after `docker build -t rewardgate-sandbox:1 docker/` (step A8), which makes it
+`294 passed`. Nothing else in the suite is gated.
 
 What a green suite does and does not verify. It pins **every third-party-corpus number** — the
 133/500 leakage figure, the 42.0% at-least-one-defect rate, and the specific instance *ids*, not

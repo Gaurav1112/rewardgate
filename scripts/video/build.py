@@ -257,10 +257,15 @@ SEGMENTS = [
      ], None, "results/cli_overhead_probe.json"),
 ]
 
+# Run verbatim from a clean clone before every render. The previous version skipped the two data
+# steps, so a viewer who pasted it hit `corpus not fetched` on the command the slide claims
+# reproduces the headline. A reproduction card that does not reproduce is worse than no card.
 LANDING = ("Reproduction", [
-    "  git clone https://github.com/Gaurav1112/rewardgate",
+    "  git clone https://github.com/Gaurav1112/rewardgate && cd rewardgate",
     "  uv sync",
-    "  uv run pytest -q                                    294 passed",
+    "  ./scripts/fetch_real_corpus.sh                      2.0 MB, pinned",
+    "  uv run python corpus/synthetic/build.py             15 bundles",
+    "  uv run pytest -q                          290 passed, 4 skipped",
     "  uv run python -m rewardgate.report_real             $0.00",
     "  uv run python scripts/run_parity_ablation.py --replay",
     "",

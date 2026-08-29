@@ -27,11 +27,61 @@ exercised against a defect set the author did not create and could not tune agai
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 
 from rewardgate.diffutil import files_in_patch
 
-__all__ = ["LeakageFinding", "detect_solution_leakage", "files_in_patch"]
+__all__ = [
+    "LeakageFinding",
+    "detect_solution_leakage",
+    "files_in_patch",
+    "named_only_in_traceback",
+]
+
+_FRAME = re.compile(r'^\s*File "[^"]+", line \d+')
+_EXCEPTION = re.compile(r"^\w*(Error|Exception|Warning)\b")
+
+
+def _traceback_lines(statement: str) -> set[int]:
+    """Indices of lines belonging to a pasted Python traceback."""
+    inside, marked = False, set()
+    for i, line in enumerate(statement.splitlines()):
+        if "Traceback (most recent call last)" in line:
+            inside = True
+        if _FRAME.match(line):
+            inside, _ = True, marked.add(i)
+            continue
+        if inside:
+            if not line.strip() or re.match(r"\s", line) or _EXCEPTION.match(line.strip()):
+                marked.add(i)
+            else:
+                inside = False
+    return marked
+
+
+def named_only_in_traceback(problem_statement: str | None, finding: "LeakageFinding") -> bool:
+    """Whether every mention of the gold file sits inside a pasted traceback.
+
+    This is the checker's weakest case and it is worth separating rather than defending. A stack
+    trace naming the file is ordinary bug-report content — the reporter pasted what their console
+    printed, they did not point at the fix. Counting it as "the issue text discloses the solution"
+    conflates a reporting convention with an authoring error.
+
+    It is not simply a false positive either, which is why the strict figure is reported alongside
+    the headline rather than replacing it: an agent reading that traceback *does* learn which file
+    to open, and localisation is exactly the skill the task claims to measure. Both readings are
+    defensible, so both numbers are published and the reader picks.
+    """
+    if not finding.leaked:
+        return False
+    statement = problem_statement or ""
+    needles = tuple(finding.leaked_paths) + tuple(finding.leaked_basenames)
+    marked = _traceback_lines(statement)
+    return not any(
+        i not in marked and any(n in line for n in needles)
+        for i, line in enumerate(statement.splitlines())
+    )
 
 
 @dataclass(frozen=True)

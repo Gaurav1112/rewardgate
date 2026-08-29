@@ -254,6 +254,15 @@ cited artifact and an executed one are indistinguishable until one of them is fa
 of its nine is (`semverlite-nop-pass / REWARD_HACKABLE`, a hallucinated defect on a sound task).
 The macro-F1 comparison is a tie and stays a tie.
 
+**And the third row, which goes the other way.** Time per task, measured
+(`uv run python scripts/measure_human_time.py`): the commands a reviewer cannot avoid running by
+hand take **0.17s** per task; RewardGate takes **0.26s**. It is *slower*, because it materialises
+each bundle twice so the oracle cannot leak into the no-op measurement, and walks every ref rather
+than one branch. On a single task this tool does not save time and does not claim to. Time only
+becomes decisive at a scale the manual process never reaches — 2,938 third-party instances for
+$0.00. Full caveats, including why this is a floor rather than human time, in
+[docs/EVALUATION.md](docs/EVALUATION.md#human-time-per-task--the-third-row-and-it-does-not-favour-this-tool).
+
 ---
 
 ## Prior art
