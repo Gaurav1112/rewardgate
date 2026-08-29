@@ -10,6 +10,7 @@ Runs in under a second, makes no model calls, and costs nothing.
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
 from rewardgate.checkers.assertions import analyze_test_assertions
@@ -23,9 +24,19 @@ from rewardgate.corpus import load_real_corpus
 PUBLISHED_LEAKAGE = 135
 
 
+# The held-out corpus. SWE-Gym is built from a different set of repositories and shares zero
+# instances with SWE-bench Verified, so running the same checkers over it asks whether the defect
+# rate is a property of these detectors, of Verified, or of how these benchmarks get built.
+HOLDOUT = Path(__file__).resolve().parent.parent / "corpus" / "real" / "raw" / "swegym_train.parquet"
+
+
 def main() -> None:
-    bundles = load_real_corpus()
+    holdout = "--holdout" in sys.argv
+    if holdout and not HOLDOUT.exists():
+        sys.exit("holdout corpus not fetched. Run: ./scripts/fetch_holdout_corpus.sh")
+    bundles = load_real_corpus(HOLDOUT if holdout else None)
     total = len(bundles)
+    name = "SWE-Gym (held out)" if holdout else "SWE-bench Verified"
 
     leakage = [detect_solution_leakage(b.problem_statement, b.patch) for b in bundles]
     overspec = [detect_over_specification(b.problem_statement, b.patch) for b in bundles]
@@ -37,9 +48,11 @@ def main() -> None:
         return f"{label:<38}{count:>4}/{denominator:<5}({count / denominator * 100:>5.1f}%)  {note}"
 
     leaked = sum(f.leaked for f in leakage)
-    print(f"SWE-bench Verified — {total} instances, deterministic checks, $0.00\n" + "=" * 78)
-    print(line("solution leakage (gold file named)", leaked,
-               note=f"cf. published {PUBLISHED_LEAKAGE} (different heuristic: theirs also counts imports, mine counts basenames)"))
+    print(f"{name} — {total} instances, deterministic checks, $0.00\n" + "=" * 78)
+    note = "" if holdout else (
+        f"cf. published {PUBLISHED_LEAKAGE} (different heuristic: theirs also counts imports, "
+        "mine counts basenames)")
+    print(line("solution leakage (gold file named)", leaked, note=note))
     print(line("  of which full path (high conf.)", sum(f.confidence == "high" for f in leakage)))
     print(line("over-specified (internal symbol)", sum(f.over_specified for f in overspec)))
     print(line("  high severity (symbol + file)", sum(f.severity == "high" for f in overspec)))
@@ -68,9 +81,11 @@ def main() -> None:
         "Those are excluded from the weak-assertion rate rather than counted as clean."
     )
 
-    out = Path(__file__).resolve().parent.parent / "results" / "real_corpus_findings.json"
+    stem = "holdout_corpus_findings" if holdout else "real_corpus_findings"
+    out = Path(__file__).resolve().parent.parent / "results" / f"{stem}.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps({
+        "corpus": name,
         "instances": total,
         "solution_leakage": leaked,
         "published_leakage_reference": PUBLISHED_LEAKAGE,

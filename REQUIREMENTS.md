@@ -114,6 +114,7 @@ review rounds, and an unverified late fix is worth less than a disclosed defect.
 | Claim | Verify with |
 |---|---|
 | 210/500 (42.0%) carry a defect | `uv run python -m rewardgate.report_real` |
+| Replicates at 43.5% on a zero-overlap held-out corpus | `./scripts/fetch_holdout_corpus.sh && uv run python -m rewardgate.report_real --holdout` |
 | 133/500 leakage; cf. published 135 | same command — **different heuristics, corroboration not replication** |
 | macro-F1 0.600 baseline / 0.933 RewardGate | `uv run python -m rewardgate.evaluate --replay` |
 | Parity: 0.889 vs 0.933, gap 0.044, p = 1.00 | `uv run python scripts/run_parity_ablation.py --replay` |

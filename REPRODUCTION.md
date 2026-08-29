@@ -101,6 +101,17 @@ weak fail-to-pass assertions            48/350  ( 13.7%)
 AT LEAST ONE DEFECT                    210/500  ( 42.0%)
 ```
 
+### A4b. Replicate the finding on a held-out corpus
+
+```bash
+./scripts/fetch_holdout_corpus.sh          # SWE-Gym, ~44 MB, checksum-pinned
+uv run python -m rewardgate.report_real --holdout
+```
+
+The same four checkers, unchanged, on 2,438 instances from a different set of repositories with
+**zero overlap** with SWE-bench Verified. Expect `AT LEAST ONE DEFECT 1061/2438 (43.5%)` against
+Verified's 42.0%, and leakage 27.2% against 26.6%. **$0.00, a few seconds.**
+
 ### A5. Re-score the saved agent audits
 
 ```bash

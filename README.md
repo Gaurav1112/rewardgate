@@ -16,7 +16,25 @@ that the leakage is real and roughly this common, not a reproduction of their fi
 version of this README called it "two apart, on a corpus I did not build", which read as a
 replication it is not.
 
-Across all four checkers, **210 of 500 instances (42.0%)** trip at least one. That is what these
+Across all four checkers, **210 of 500 instances (42.0%)** trip at least one.
+
+**And it replicates out of sample.** One corpus cannot distinguish *"42% of SWE-bench Verified"*
+from *"42% of how these benchmarks get built"*, and the checkers were written while looking at
+Verified. So I ran them unchanged against **SWE-Gym — 2,438 instances, different repositories,
+zero shared instances** (asserted in `tests/test_holdout_corpus.py`, not assumed):
+
+| Check | SWE-bench Verified (500) | SWE-Gym held out (2,438) |
+|---|---:|---:|
+| Solution leakage | 26.6% | **27.2%** |
+| Over-specification | 8.4% | 6.3% |
+| Hint discloses gold patch | 10.8% | 3.2% |
+| Weak fail-to-pass assertions | 13.7% | 30.7% |
+| **At least one defect** | **42.0%** | **43.5%** |
+
+The headline rate holds on 4.9× more data the detectors have never seen. The two that move are
+informative rather than embarrassing: SWE-Gym is auto-collected where Verified was human-screened,
+so weaker assertions and thinner hint text are what you would expect. `./scripts/fetch_holdout_corpus.sh`
+then `uv run python -m rewardgate.report_real --holdout` — $0.00, no model calls. That is what these
 four checks find — not a ground-truth defect rate — and it is deterministic, takes about a second,
 needs no API key, and reproduces in three commands.
 

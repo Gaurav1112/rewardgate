@@ -1,0 +1,11 @@
+{
+  "corpus": "SWE-Gym (held out)",
+  "instances": 2438,
+  "solution_leakage": 663,
+  "published_leakage_reference": 135,
+  "over_specified_internal": 154,
+  "hint_contamination": 79,
+  "weak_assertions": 455,
+  "assertion_parse_coverage": 1480,
+  "at_least_one_defect": 1061
+}
