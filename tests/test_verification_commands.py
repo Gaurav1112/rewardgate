@@ -19,6 +19,7 @@ is why these tests execute the emitted commands instead of inspecting their text
 
 from __future__ import annotations
 
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -76,9 +77,23 @@ def test_the_emitted_grep_stays_silent_on_the_negative_control():
     assert not result.stdout.strip(), f"false positive on the negative control: {result.stdout!r}"
 
 
-def test_the_oracle_and_nop_commands_run_and_give_the_documented_outcomes():
-    """Executed, not pattern-matched: the previous block was syntactically fine and still broken."""
-    bundle = BUNDLES / "csvlite-clean"
+def test_the_oracle_and_nop_commands_run_and_give_the_documented_outcomes(tmp_path):
+    """Executed, not pattern-matched: the previous block was syntactically fine and still broken.
+
+    **Run against a copy, never the shipped corpus.** This test applies `solution.patch` to a
+    bundle and reverses it in a `finally`, and it used to do that in `corpus/synthetic/bundles/`
+    itself. For the ~2 seconds the patch was applied, that clean bundle was a *fixed* bundle on
+    disk, so anything else materialising it — a second pytest process, `pytest -n auto`, or a `
+    rewardgate audit` running in another terminal — copied the patched tree, watched the no-op
+    trial pass, and reported `NOP_PASS` on a bundle whose whole job is to be clean. That is a
+    false REJECT, manufactured by the test suite of a tool built to prevent false verdicts.
+
+    Interrupting the test between the apply and the `finally` was worse: the corpus stayed patched
+    permanently and every later audit of `csvlite-clean` was wrong until someone rebuilt it.
+    """
+    bundle = tmp_path / "csvlite-clean"
+    shutil.copytree(BUNDLES / "csvlite-clean", bundle,
+                    ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".pytest_cache"))
     patch = bundle / "solution.patch"
 
     def pytest_in(cwd: Path) -> subprocess.CompletedProcess:
