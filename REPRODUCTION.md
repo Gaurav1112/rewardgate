@@ -73,20 +73,26 @@ on this machine**, so in a terminal it first requires you to type `yes`; `--yes`
 uv run pytest -q
 ```
 
-Expected: **296 tests collected, 0 failed**, in roughly 10–20 seconds.
+Expected: **300 tests collected, 0 failed**, in roughly 10–20 seconds.
 
-How many of the 296 *run* depends on optional prerequisites, so the pass count is not a single
+How many of the 300 *run* depends on optional prerequisites, so the pass count is not a single
 number and this guide will not pretend it is. All three of these were observed:
 
-| State | Result |
+| State | Skipped |
 |---|---|
-| Clean clone, nothing else fetched | `289 passed, 7 skipped` |
-| After A4b fetches the held-out corpus | `292 passed, 4 skipped` |
-| After A8 builds `rewardgate-sandbox:1` | `296 passed` |
+| Clean clone, nothing else fetched | **7** — 4 container, 3 held-out corpus |
+| After A4b fetches the held-out corpus | **4** — container only |
+| After A8 builds `rewardgate-sandbox:1` | **0** |
+
+Skips are quoted rather than pass counts on purpose: the skip count depends on which optional
+prerequisites you have, which is the thing that actually varies, while a pass count also moves
+every time a test is added. Documenting the moving number is how this guide got it wrong three
+times, and `tests/test_docs_match_artifacts.py` now fails the suite if any document disagrees with
+the real total.
 
 Run `uv run pytest -q -rs` to see which are skipped and why; every skip names the command that
 enables it. **No configuration produces a failure** — that is the claim to hold this to. An earlier
-version of this file asserted a flat `294 passed`, which is only reachable with a container image
+version of this file asserted a flat pass count, which was only reachable with a container image
 the guide had not told you to build.
 
 What a green suite does and does not verify. It pins **every third-party-corpus number** — the

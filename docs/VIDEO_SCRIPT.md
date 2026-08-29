@@ -137,7 +137,7 @@ Read it flat. Short sentences. Do not perform the reversals as apologies. They a
 **Landing card, 4:42 to 4:46, silent, not read aloud:**
 
 ```
-296 collected, 0 failed
+300 collected, 0 failed
 github.com/Gaurav1112/rewardgate
 ```
 
@@ -479,12 +479,12 @@ better over the `$0.00` column than over a title card.
 **4:42–4:46, landing card.** Cut to a plain slide:
 
 ```
-296 collected, 0 failed
+300 collected, 0 failed
 github.com/Gaurav1112/rewardgate
 ```
 
 If you would rather prove it rather than assert it, run `uv run pytest -q` and hold on
-`296 collected, 0 failed`. **This is the one command in the video that takes about ten seconds.** Only
+`300 collected, 0 failed`. **This is the one command in the video that takes about ten seconds.** Only
 do it if you are under 4:30 at that point, and run it once before recording so the import cache is
 warm.
 

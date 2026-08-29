@@ -265,7 +265,7 @@ LANDING = ("Reproduction", [
     "  uv sync",
     "  ./scripts/fetch_real_corpus.sh                      2.0 MB, pinned",
     "  uv run python corpus/synthetic/build.py             15 bundles",
-    "  uv run pytest -q                        296 collected, 0 failed",
+    "  uv run pytest -q                        300 collected, 0 failed",
     "  uv run python -m rewardgate.report_real             $0.00",
     "  uv run python scripts/run_parity_ablation.py --replay",
     "",

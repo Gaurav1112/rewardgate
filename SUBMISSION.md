@@ -47,7 +47,7 @@ uv sync && ./scripts/fetch_real_corpus.sh
 uv run python -m rewardgate.report_real     # 210/500 (42.0%), $0.00, ~1s
 ```
 
-Then, if you want the whole thing: `uv run pytest -q` (296 tests, 0 failed) and
+Then, if you want the whole thing: `uv run pytest -q` (300 tests, 0 failed) and
 `uv run python scripts/run_parity_ablation.py --replay` (the ablation that refuted my own
 headline — free, under a second).
 
@@ -70,7 +70,7 @@ round-3 fixes, and four round-5 exploits defeated round-4 fixes. An unverified l
 than a disclosed bug.
 
 It was then **deliberately and narrowly unfrozen**. That regression rate was measured at 3am under
-time pressure; with days remaining and 296 tests it is a different bet, and every fix below landed
+time pressure; with days remaining and 300 tests it is a different bet, and every fix below landed
 with a regression test that **reproduces the defect against the pre-fix code** before pinning it.
 Four of the five disclosed defects are now fixed. The one left is left on purpose, and the reason
 is given.

@@ -42,6 +42,25 @@ def _digest() -> dict[str, str]:
     return out
 
 
+_COLLECTED: list[int] = []
+
+
+def pytest_collection_modifyitems(items):
+    """Record how many tests exist, so a test can hold the documentation to it.
+
+    The suite size has been wrong in the docs three times — 258, then 294, then 296 — because it is
+    a number that changes every time a test is added and lives in a dozen prose files that do not.
+    Writing it down again by hand would be the fourth. `test_documented_test_count_is_current`
+    reads this.
+    """
+    _COLLECTED.append(len(items))
+
+
+@pytest.fixture(scope="session")
+def collected_test_count() -> int:
+    return _COLLECTED[0] if _COLLECTED else 0
+
+
 @pytest.fixture(scope="session", autouse=True)
 def corpus_is_left_exactly_as_it_was_found():
     """Fails the session if any test mutated a shipped bundle, naming the files."""
