@@ -34,8 +34,8 @@ Verified against the working tree; every path below exists.
 | 1 | **The instructions that shape each agent** | `EXPLOIT_BRIEF` (`rewardgate/exploit.py`), `PREAMBLE` (`rewardgate/baseline.py`); both reproduced verbatim in `trajectories/*.md` | ✅ |
 | 1 | README introduces user, bottleneck, value | [README.md § Who has this problem](README.md#who-has-this-problem) | ✅ |
 | 1 | **Clearly labelled** Improvement Changelog | [IMPROVEMENT_CHANGELOG.md](IMPROVEMENT_CHANGELOG.md) | ✅ |
-| 1 | Changelog in the prescribed 4-column structure | `## Summary` table: STAGE / WHAT I TRIED AND WHY / EVIDENCE / DECISION / LEARNING, 8 rows | ✅ |
-| 1 | An entry per meaningful iteration, tied to evidence | Baseline + Iterations 1–5 + 2 Removed + 1 Withdrawn, each with a measured Evidence block | ✅ |
+| 1 | Changelog in the prescribed 4-column structure | `## Summary` table: STAGE / WHAT I TRIED AND WHY / EVIDENCE / DECISION / LEARNING, 9 rows | ✅ |
+| 1 | An entry per meaningful iteration, tied to evidence | Baseline + Iterations 1–6 + 2 Removed + 1 Withdrawn, each with a measured Evidence block | ✅ |
 | 1 | Experiments later removed, and what they taught | `## Removed — a per-defect-class agent fan-out`, `## Removed — relying on conftest.py`, `## Withdrawn — a finding that was my own bug` | ✅ |
 | 1 | **Close with main failure mode and hot take** | `## Main failure mode` then `## Hot take`, final two sections | ✅ |
 | 2 | Clean-environment setup | [REPRODUCTION.md § 0](REPRODUCTION.md) — prerequisites table with pinned versions and host specs | ✅ |

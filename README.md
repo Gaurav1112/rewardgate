@@ -465,7 +465,9 @@ the anti-judge stance as a design choice with contrary evidence rather than a se
 - **An agent per defect class.** Deterministic checks produce stronger evidence at zero cost for
   every class except one. See [IMPROVEMENT_CHANGELOG.md](IMPROVEMENT_CHANGELOG.md#removed--a-per-defect-class-agent-fan-out).
 - **LLM-as-judge scoring.** The 18.5% evaluator-misalignment finding above is the reason.
-- **Multi-seed trials.** Known gap; it is the fix for the challenging case and is not implemented.
+- **Multi-seed trials.** Implemented in Iteration 6 and they were *not* the fix. At k=5 the agent
+  is deterministic (5/5 or 0/5, nothing between), so the challenging case is a grader blind spot,
+  not sampling. What remains unimplemented is a semantic cost measure.
 - **Automatic repair** of detected defects. The tool reports; the human decides.
 
 ## Safety

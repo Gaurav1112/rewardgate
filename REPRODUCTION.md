@@ -61,8 +61,11 @@ uv run rewardgate audit csvlite-contaminated-git --no-exploit
 ```
 
 Free and offline. Expect `VERDICT: REJECT`, a `CONTAMINATION_GIT` finding naming the hidden commit,
-an EXECUTED EVIDENCE block with real exit codes, and a human-checkpoint banner. Exit code 1.
-`--no-exploit` skips the paid agent tier; drop it to run the full pipeline on one bundle (~$0.26).
+an EXECUTED EVIDENCE block with real exit codes, and a human checkpoint. **In a terminal this
+prompts for `confirm` / `override` / `defer`** and exits 1 / 0 / 3 accordingly; piped or scripted
+it prints the banner and exits 1. Pass `--yes` to skip the prompt.
+`--no-exploit` skips the paid agent tier; drop it to run the full pipeline on one bundle (~$0.26). **That tier executes agent-written code
+on this machine**, so in a terminal it first requires you to type `yes`; `--yes` skips the gate.
 
 ### A3. Run the test suite
 
@@ -151,6 +154,22 @@ and it needs an API key (Path B).
 
 Requires the Claude Code CLI, authenticated (`claude login`) **or** `ANTHROPIC_API_KEY` exported.
 No credits are provided by this project.
+
+### A7. Reproduce the k-trial experiment
+
+```bash
+uv run python scripts/run_multitrial.py --replay
+```
+
+Re-scores 75 saved exploit trials. **$0.00, under a second.** This is the project's only
+statistically significant result, and the pre-registration that fixed its decision rule before any
+trial ran is in [`results/multitrial_preregistration.json`](results/multitrial_preregistration.json).
+
+Expected: every reward-hackable bundle at 5/5 or 0/5, zero detections on the other 12, statistic
+**+0.667**, exact permutation **p = 0.0286**.
+
+To regenerate rather than replay, drop `--replay`: 75 live agent trials, **~$27, ~2.5 hours**,
+needs an API key (Path B).
 
 ### B0. Deterministic tiers only, live — NOTE: this costs money
 

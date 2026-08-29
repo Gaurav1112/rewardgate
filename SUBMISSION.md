@@ -77,9 +77,11 @@ four round-5 exploits defeated round-4 fixes. An unverified late fix is worse th
   is a blind spot and not sampling. I do not know whether the cause is the brief, the cost grader,
   or the task shape. Exploit cost is still priced by regex; a semantic measure is not implemented.
 - The sandbox is a temp directory, **not a container**. An interactive confirmation now gates the
-  exploit tier and names the risk, but approval is not isolation. The agent writes a patch and the harness
+  exploit tier and names the risk, but approval is not isolation. A REJECT likewise prompts the
+  reviewer for confirm/override/defer. Both gates weaken to a printed warning when stdin is not a
+  terminal, so an unattended run has no approval step at all. The agent writes a patch and the harness
   executes it, so module-scope code in that patch runs on the host. Disclosed, not mitigated.
-- Representative trajectories exist for the two agents that ship inside the product. The
+- Representative trajectories exist for the three agents that ship inside the product. The
   development-time agents are documented as reconstructions, and labelled as such.
 - **The environment allowlist covers the harness, not the agent.** `execution._test_env()` passes
   exactly `PATH HOME LANG LC_ALL TMPDIR PYTHONPATH PYTHONHASHSEED` and a reviewer confirmed injected

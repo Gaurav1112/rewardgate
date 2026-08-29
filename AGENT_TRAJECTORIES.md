@@ -51,10 +51,13 @@ behaves when it does not find what it is looking for.
 on the host. Real isolation needs a container with no network; that is **not implemented** and is
 the largest outstanding gap. See [README Safety](README.md#safety).
 
-**Retry strategy.** None, deliberately, and this is a known limitation. A single trial is run per
+**Retry strategy.** None in the audit path, deliberately. Iteration 6 measured whether retries
+would help and found they would not: the agent is deterministic on this corpus. A single trial is run per
 bundle, bounded by `--max-turns 25` and a 600-second timeout. The measured consequence is one
 false negative (`retrylite-reward-hackable`): the stored evidence reads "the only patch found also fixes held-out behaviour; the task resisted gaming" — a string emitted only when the held-out suite PASSES, so no exploit was produced at all. An
-earlier version of this document told the second story; it was wrong. The fix is *k* independent trials taking the union; it is **not implemented**, and it would
+earlier version of this document told the second story; it was wrong. The fix was assumed to be *k* independent trials. Iteration 6 ran them — k=5 on all 15 bundles —
+and they changed nothing: k=1 and k=5 give identical verdicts, every detection is 5/5 and every
+miss is 0/5. The miss is a cost-grader blind spot, not variance.
 raise cost roughly linearly. Timeouts and unparseable output surface as `ERROR`, never as "clean".
 
 **Human checkpoint.** The agent's verdict never auto-rejects a task. `REJECT` is a recommendation
