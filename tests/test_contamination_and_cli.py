@@ -164,8 +164,27 @@ def test_the_host_execution_warning_names_what_it_is_about_to_do(capsys):
 
     assert confirm_host_execution(DEFAULT_BUNDLES / "csvlite-clean", assume_yes=True)
     warning = capsys.readouterr().err
-    for claim in ("ON THIS MACHINE", "container is not implemented", "--no-exploit"):
+    for claim in ("ON THIS MACHINE", "does NOT isolate the host", "--docker", "--no-exploit"):
         assert claim in warning
+
+
+def test_the_contained_warning_still_names_what_is_not_contained(capsys):
+    """`--docker` isolates the adjudication, not the agent session — that session *is* a network
+    call, so it cannot run under `--network none`.
+
+    A warning that said only "runs in a container" would read as total isolation and be worse than
+    the honest unconfined one, because the reviewer would stop reading.
+    """
+    from rewardgate.cli import confirm_host_execution
+    from rewardgate.execution import ContainerConfig
+
+    assert confirm_host_execution(
+        DEFAULT_BUNDLES / "csvlite-clean", assume_yes=True, container=ContainerConfig()
+    )
+    warning = capsys.readouterr().err
+    assert "--network none" in warning
+    assert "AGENT SESSION is still not contained" in warning
+    assert "does NOT isolate the host" not in warning, "stale unconfined text leaked through"
 
 
 def test_the_free_path_shows_no_host_execution_warning(capsys):

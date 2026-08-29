@@ -17,6 +17,7 @@ import sys
 from pathlib import Path
 
 from rewardgate.auditor import AuditTrace, audit_bundle
+from rewardgate.execution import SANDBOX_IMAGE, ContainerConfig, container_available
 from rewardgate.schema import (
     ACCEPT,
     CONTAMINATION_GIT,
@@ -252,16 +253,30 @@ CONSEQUENTIAL ACTION: this runs an agent that WRITES code, and then EXECUTES it 
 
   * The agent is given a hostile brief and asked to produce a patch for {bundle}.
   * That patch is applied to a temporary copy and run with pytest ON THIS MACHINE.
-  * The temp directory isolates the corpus. It does NOT isolate the host: module-scope
-    code in the patch runs with your permissions. A container is not implemented.
+{isolation}
   * Cost is roughly $0.28 and one model call.
 
 Only run this on a bundle you are willing to execute code from.
 Use --no-exploit for the free, offline, deterministic tiers.
 {rule}"""
 
+# Two accurate descriptions of two different situations. The unconfined one is the default because
+# `--docker` needs an image the reviewer has to build; the confined one still names what it does
+# *not* cover, because "runs in a container" reads as total isolation and this is not that.
+_UNCONFINED = """\
+  * The temp directory isolates the corpus. It does NOT isolate the host: module-scope
+    code in the patch runs with your permissions. Pass --docker to contain it."""
 
-def confirm_host_execution(bundle_dir: Path, assume_yes: bool) -> bool:
+_CONFINED = """\
+  * The patch is executed in a container with --network none, as a non-root user, with no
+    host path mounted. Verify: uv run python scripts/prove_containment.py
+  * The AGENT SESSION is still not contained — it needs the network to reach the API.
+    It writes to a temp directory and holds Read/Edit/Write/Grep/Glob and pytest."""
+
+
+def confirm_host_execution(
+    bundle_dir: Path, assume_yes: bool, container: ContainerConfig | None = None
+) -> bool:
     """Approval before the one consequential action this tool takes.
 
     Rule 04 asks for human approval *before* the action happens, and the exploit tier was opt-out:
@@ -271,7 +286,13 @@ def confirm_host_execution(bundle_dir: Path, assume_yes: bool) -> bool:
     prompt in CI and in every documented command. That is a deliberate weakening of the gate and
     it is stated rather than hidden: piping input is itself a decision to run unattended.
     """
-    print(HOST_EXECUTION_WARNING.format(rule=_rule("!"), bundle=bundle_dir.name), file=sys.stderr)
+    print(
+        HOST_EXECUTION_WARNING.format(
+            rule=_rule("!"), bundle=bundle_dir.name,
+            isolation=_CONFINED if container else _UNCONFINED,
+        ),
+        file=sys.stderr,
+    )
     if assume_yes or not sys.stdin.isatty():
         return True
     reply = input("  Type 'yes' to run the exploit trial: ").strip().lower()
@@ -335,10 +356,20 @@ def cmd_audit(args: argparse.Namespace) -> int:
         print("       see docs/BUNDLE_FORMAT.md. No verdict is claimed.", file=sys.stderr)
         return EXIT_INDETERMINATE
 
-    if not args.no_exploit and not confirm_host_execution(bundle_dir, args.yes):
+    container = ContainerConfig() if args.docker else None
+    if container and (reason := container_available(container)):
+        # Fail, do not fall back. A `--docker` run that quietly degrades to host execution is
+        # worse than no flag: the reviewer asked for containment, did not get it, and the report
+        # says nothing. This is the same fail-closed rule the audit applies to its own checks.
+        print(f"error: --docker requested but unavailable: {reason}", file=sys.stderr)
+        return EXIT_USAGE
+
+    if not args.no_exploit and not confirm_host_execution(bundle_dir, args.yes, container):
         return EXIT_INDETERMINATE
 
-    audit, trace = audit_bundle(bundle_dir, run_exploit=not args.no_exploit)
+    audit, trace = audit_bundle(
+        bundle_dir, run_exploit=not args.no_exploit, container=container
+    )
     print(render_report(audit, trace, bundle_dir))
     if audit.error:
         print(f"  BLOCKED: {audit.error}\n")
@@ -377,6 +408,11 @@ def main(argv: list[str] | None = None) -> int:
     audit_parser.add_argument(
         "--yes", action="store_true",
         help="skip the host-execution confirmation (implied when stdin is not a terminal)",
+    )
+    audit_parser.add_argument(
+        "--docker", action="store_true",
+        help="run every test execution in a network-less container "
+             f"(build it first: docker build -t {SANDBOX_IMAGE} docker/)",
     )
     audit_parser.set_defaults(func=cmd_audit)
 

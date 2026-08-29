@@ -21,6 +21,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from rewardgate.checkers.contamination import detect_git_contamination
+from rewardgate.execution import ContainerConfig
 from rewardgate.exploit import ExploitResult, run_exploit_trial
 from rewardgate.gates import RewardGateResult, read_patch, run_reward_gate
 from rewardgate.schema import (
@@ -71,23 +72,27 @@ def audit_bundle(
     bundle_dir: Path,
     run_exploit: bool = True,
     model: str | None = None,
+    container: ContainerConfig | None = None,
 ) -> tuple[Audit, AuditTrace]:
     """Audit one bundle. Returns the verdict and the evidence behind it.
 
     `run_exploit=False` runs the deterministic tiers only — free, offline, and the mode a judge
     can use without an API key.
+
+    `container` runs every test execution — the gold patch, the empty patch, and the agent's
+    exploit — inside a network-less container instead of on the host.
     """
     bundle_id = bundle_dir.name
 
-    gate = run_reward_gate(bundle_dir)
+    gate = run_reward_gate(bundle_dir, container=container)
     contamination = detect_git_contamination(bundle_dir, read_patch(bundle_dir))
 
     exploit: ExploitResult | None = None
     if run_exploit:
         exploit = (
-            run_exploit_trial(bundle_dir, model=model)
+            run_exploit_trial(bundle_dir, model=model, container=container)
             if model
-            else run_exploit_trial(bundle_dir)
+            else run_exploit_trial(bundle_dir, container=container)
         )
 
     defects = {

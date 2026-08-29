@@ -18,7 +18,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from rewardgate.execution import MaterialisedBundle, TestOutcome, materialise
+from rewardgate.execution import ContainerConfig, MaterialisedBundle, TestOutcome, materialise
 
 
 @dataclass(frozen=True)
@@ -85,7 +85,11 @@ def read_patch(bundle_dir: Path) -> str:
     return patch.read_text() if patch.exists() else ""
 
 
-def run_reward_gate(bundle_dir: Path, tests_subdir: str = "tests") -> RewardGateResult:
+def run_reward_gate(
+    bundle_dir: Path,
+    tests_subdir: str = "tests",
+    container: ContainerConfig | None = None,
+) -> RewardGateResult:
     """Run the no-op then oracle trial for `bundle_dir`.
 
     Each trial gets its own materialised copy so the oracle's applied patch cannot leak into the
@@ -94,11 +98,11 @@ def run_reward_gate(bundle_dir: Path, tests_subdir: str = "tests") -> RewardGate
     patch_text = read_patch(bundle_dir)
 
     with materialise(bundle_dir) as tmp:
-        bundle = MaterialisedBundle(Path(tmp))
+        bundle = MaterialisedBundle(Path(tmp), container)
         nop_outcome = bundle.run_tests(bundle.repo / tests_subdir)
 
     with materialise(bundle_dir) as tmp:
-        bundle = MaterialisedBundle(Path(tmp))
+        bundle = MaterialisedBundle(Path(tmp), container)
         error = bundle.apply_patch(patch_text)
         oracle_outcome = (
             bundle.run_tests(bundle.repo / tests_subdir)

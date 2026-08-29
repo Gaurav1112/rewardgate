@@ -1,0 +1,22 @@
+{
+  "image": "rewardgate-sandbox:1",
+  "network_flag": "none",
+  "host": {
+    "network": "reachable",
+    "host_write": "written",
+    "secrets_visible": [],
+    "uid": 501,
+    "is_root": false,
+    "canary_on_disk": true
+  },
+  "contained": {
+    "network": "blocked (OSError)",
+    "host_write": "blocked (FileNotFoundError)",
+    "secrets_visible": [],
+    "uid": 1000,
+    "is_root": false,
+    "canary_on_disk": false
+  },
+  "network_blocked_only_when_contained": true,
+  "host_filesystem_unreachable_when_contained": true
+}
