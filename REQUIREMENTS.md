@@ -18,7 +18,7 @@ Verified against the working tree; every path below exists.
 |---|---|---|
 | Repository obtainable | `github.com/Gaurav1112/rewardgate`, public | **PASS** |
 | Archive | built on demand with `git archive --format=zip --prefix=rewardgate/ HEAD -o rewardgate-submission.zip`; last build verified to run standalone (`uv sync && pytest` inside the extracted copy) | **PASS (built at submission time, not committed)** |
-| Tests | `uv run pytest -q` → 258 passed, ~11s, no API key | **PASS** |
+| Tests | `uv run pytest -q` → 294 passed, ~14s, no API key | **PASS** |
 | README | [README.md](README.md) — user, bottleneck, why it matters | **PASS** |
 | Agent-use evidence | [AGENT_TRAJECTORIES.md](AGENT_TRAJECTORIES.md), [`trajectories/`](trajectories/) | **PASS** |
 | Demo video | [`rewardgate-demo.mp4`](rewardgate-demo.mp4), 4:47, tracked in-repo | **PASS** |
@@ -73,7 +73,7 @@ Verified against the working tree; every path below exists.
 | 1 | Build with tools you know | ✅ | stdlib + pytest + pyyaml + pyarrow; agent is the Claude Code CLI |
 | 2 | Clear what pre-existed vs what you added | ✅ | 47+ commits, all inside the window; SWE-bench fetched not vendored; 15 papers cited |
 | 3 | Licences and service terms | ✅ | MIT `LICENSE`; dataset fetched at runtime, never redistributed |
-| 4 | Consequential actions sandboxed; human approval | ✅ | Interactive sessions must type `yes` before the exploit tier runs; the warning names host execution, the missing container, and the cost. Non-interactive callers are warned and proceed, which is a stated weakening. `--no-exploit` needs no approval because it executes nothing. **Still not a container** — that limitation is unchanged and disclosed. |
+| 4 | Consequential actions sandboxed; human approval | ✅ | **Sandboxed:** `--docker` runs every test execution in a container with `--network none`, non-root, capabilities dropped and no host path mounted — measured against the uncontained run by `scripts/prove_containment.py`, not asserted. **Approval:** interactive sessions must type `yes` before the exploit tier runs, and the warning has two variants so the contained one still names what it does *not* cover. Non-interactive callers are warned and proceed, a stated weakening. `--no-exploit` needs no approval because it executes nothing. Remaining gap: the agent session cannot be contained under `--network none` (it is an API call), and `--docker` is opt-in. |
 | 5 | Qualified human reviewer in the loop | ✅ | An interactive REJECT now requires the reviewer to record **confirm / override / defer**, and the decision is printed into the report and sets the exit code. `override` exits 0: a reviewer who has read the evidence outranks the tool. `defer` exits 3, because undecided must not read as accepted. |
 | 6 | Legal and ethical use case | ✅ | `LICENSE` bounds intended use to pre-submission auditing |
 | 7 | Data you are allowed to share | ✅ | public SWE-bench Verified + self-authored synthetic corpus |
@@ -88,24 +88,23 @@ Verified against the working tree; every path below exists.
 Listed here rather than left to be found. All are confirmed with executed reproductions; see
 [SUBMISSION.md](SUBMISSION.md) for the full text.
 
-1. **The sandbox is a temp directory, not a container.** The agent writes a patch and the harness
-   executes it, so module-scope code in that patch runs on the host.
-2. **The environment allowlist covers the harness, not the agent session.** `execution._test_env()`
-   passes seven variables and is verified against injected canaries, but `exploit._run_agent` and
-   `baseline.audit_bundle` invoke the CLI with no `env=`.
-3. **The contamination scope set is read from the audited patch.** A planted decoy file can erase
-   the fingerprint.
-4. **Exploit cost is not invariant to docstrings.** Comment stripping handles `#`, not `"""`.
-5. **`files_in_patch` parses only the `diff --git` header form.**
-6. **Two further paths reach ACCEPT with the held-out suite unmeasured.**
-7. **The primary metric is a null result.** macro-F1 0.933 against a fair baseline's 0.889 — one
+1. **The agent session is not contained.** `--docker` contains every *test execution* under
+   `--network none` with no host path mounted, measured both ways by
+   `scripts/prove_containment.py`. The agent session cannot be — it is an API call — and `--docker`
+   is opt-in, so the default path still runs agent-written code on the host.
+   See [docs/SANDBOXING.md](docs/SANDBOXING.md).
+2. **Exploit cost is not invariant to docstrings.** Comment stripping handles `#`, not `"""`. Left
+   unfixed on purpose: `results/multitrial_preregistration.json` freezes the cost metric.
+3. **Two further paths reach ACCEPT with the held-out suite unmeasured.**
+4. **The primary metric is a null result.** macro-F1 0.933 against a fair baseline's 0.889 — one
    discordant judgement in 45, McNemar exact **p = 1.00**. Established by
-   [the author's own ablation](README.md#the-ablation-that-refutes-the-headline).
-8. **Development-time agent trajectories are prose reconstructions**, not transcripts.
+   [the author's own ablation](docs/EVALUATION.md#the-ablation-that-refutes-the-headline).
+5. **Development-time agent trajectories are prose reconstructions**, not transcripts.
 
-Items 2–6 were found after the code freeze and are documented rather than patched: the measured
-regression rate on this repository's security-hardening edits was roughly one in two across two
-review rounds, and an unverified late fix is worth less than a disclosed defect.
+Four defects previously listed here have been fixed, each with a regression test that reproduces
+the defect against the pre-fix code before pinning it: the environment allowlist at all three
+invocation sites, `files_in_patch` reading `+++ b/...`, per-file contamination subtraction, and
+`git add -f` past a shipped `.gitignore`. See [SUBMISSION.md](SUBMISSION.md) for the table.
 
 ---
 
@@ -119,8 +118,10 @@ review rounds, and an unverified late fix is worth less than a disclosed defect.
 | macro-F1 0.600 baseline / 0.933 RewardGate | `uv run python -m rewardgate.evaluate --replay` |
 | Parity: 0.889 vs 0.933, gap 0.044, p = 1.00 | `uv run python scripts/run_parity_ablation.py --replay` |
 | McNemar p = 0.2500, 3 discordant | `uv run python -m rewardgate.significance` |
-| Every third-party corpus number is pinned | `uv run pytest -q` → 258 passed |
+| Every third-party corpus number is pinned | `uv run pytest -q` → 294 passed |
 | Cost $0.1174 / $0.2551 per bundle | `results/summary.json` |
 | CLI overhead $0.1967 before any work | `results/cli_overhead_probe.json` |
+| `--docker` blocks the network and the host filesystem | `docker build -t rewardgate-sandbox:1 docker/ && uv run python scripts/prove_containment.py` |
 
-Every command above is free, offline, and needs no API key.
+Every command above is free, offline, and needs no API key — except the last, which needs a
+container engine and one image build.

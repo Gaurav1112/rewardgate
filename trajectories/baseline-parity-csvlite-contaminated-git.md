@@ -5,7 +5,7 @@
 
 **Cost $0.1186 · 29.6s · verdict REJECT** — read from
 [`results/baseline_parity_audits.json`](../results/baseline_parity_audits.json), which is the
-record the [parity ablation](../README.md#the-ablation-that-refutes-the-headline) actually scores.
+record the [parity ablation](../docs/EVALUATION.md#the-ablation-that-refutes-the-headline) actually scores.
 
 > **Provenance, because an earlier version of this file got it wrong.** The first draft was written
 > from a *separate* live invocation made only to capture a transcript, and it quoted that run's cost

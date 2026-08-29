@@ -47,7 +47,7 @@ uv sync && ./scripts/fetch_real_corpus.sh
 uv run python -m rewardgate.report_real     # 210/500 (42.0%), $0.00, ~1s
 ```
 
-Then, if you want the whole thing: `uv run pytest -q` (258 tests) and
+Then, if you want the whole thing: `uv run pytest -q` (294 tests) and
 `uv run python scripts/run_parity_ablation.py --replay` (the ablation that refuted my own
 headline — free, under a second).
 
@@ -56,51 +56,64 @@ headline — free, under a second).
 1. **Is the 42% real?** Run `report_real`. It is deterministic and third-party; nothing about it
    depends on my synthetic corpus or on trusting me.
 2. **Did I grade my own homework?** The synthetic tier is mine and says so. The
-   [circularity section](README.md#why-these-numbers-are-not-circular) states exactly what the
+   [circularity section](docs/EVALUATION.md#why-these-numbers-are-not-circular) states exactly what the
    third-party anchor does and does not establish.
 3. **Is the improvement claim honest?** I ran the ablation that could refute it, and it did: the
    gap against a *fair* baseline is 0.044 at McNemar p = 1.00, not the 0.333 I first measured. Both
    numbers, and why the first was wrong, are in the changelog.
 
-## Code freeze
+## The code freeze, and why it was lifted
 
-Code frozen after the fifth adversarial review round. Defects found after the freeze are
-**documented below rather than fixed**, because the measured regression rate on this repository's
-security-hardening edits was roughly one in two: two round-4 exploits defeated round-3 fixes, and
-four round-5 exploits defeated round-4 fixes. An unverified late fix is worse than a disclosed bug.
+Code was frozen after the fifth adversarial review round, because the measured regression rate on
+this repository's security-hardening edits was roughly one in two: two round-4 exploits defeated
+round-3 fixes, and four round-5 exploits defeated round-4 fixes. An unverified late fix is worse
+than a disclosed bug.
+
+It was then **deliberately and narrowly unfrozen**. That regression rate was measured at 3am under
+time pressure; with days remaining and 294 tests it is a different bet, and every fix below landed
+with a regression test that **reproduces the defect against the pre-fix code** before pinning it.
+Four of the five disclosed defects are now fixed. The one left is left on purpose, and the reason
+is given.
 
 ## Known limitations, stated up front
 
-- **The exploit agent has an unexplained capability boundary.** Measured at k=5 on all 15 bundles
-  (pre-registered, $26.67): 2 of 3 reward-hackable bundles detect 5/5, the third detects 0/5, and
-  all 12 others detect 0/5. Perfectly bimodal — the agent is deterministic, not noisy, so the miss
-  is a blind spot and not sampling. I do not know whether the cause is the brief, the cost grader,
-  or the task shape. Exploit cost is still priced by regex; a semantic measure is not implemented.
-- The sandbox is a temp directory, **not a container**. An interactive confirmation now gates the
-  exploit tier and names the risk, but approval is not isolation. A REJECT likewise prompts the
-  reviewer for confirm/override/defer. Both gates weaken to a printed warning when stdin is not a
-  terminal, so an unattended run has no approval step at all. The agent writes a patch and the harness
-  executes it, so module-scope code in that patch runs on the host. Disclosed, not mitigated.
+- **The cost grader cannot price an exploit it has no pattern for.** Measured at k=5 on all 15
+  bundles (pre-registered, $26.67): 2 of 3 reward-hackable bundles detect 5/5, the third detects
+  0/5, and all 12 others detect 0/5. Perfectly bimodal — the agent is deterministic, not noisy. On
+  the miss the agent *did* produce a working exploit 5 times out of 5; it wrote the interval
+  predicate `if 7 <= attempt <= 39:`, which matches none of `_HARDCODE_PATTERNS`, so the cost came
+  back 0 and the verdict degraded to "cost not measurable". It is a **detector-expressiveness**
+  limit, not a capability boundary — an earlier version of this line said the cause was unknown.
+  Exploit cost is still priced by regex; a semantic measure is not implemented.
+- **The agent session runs on the host.** `--docker` now contains every *test execution* — the
+  no-op trial, the oracle trial and the adjudication — in a container with `--network none`, no
+  host path mounted, non-root, capabilities dropped, and it is measured both ways rather than
+  asserted (`scripts/prove_containment.py`; network `reachable` → `blocked`, host write `written`
+  → `blocked`). The agent session itself is **not** contained and cannot be under `--network none`,
+  because that session is an API call. It is bounded by a temp copy, a tool allowlist and an
+  environment allowlist instead. `--docker` is also opt-in, so the default path still executes
+  agent-written code on the host; the approval banner says so in those words. Both approval gates
+  weaken to a printed warning when stdin is not a terminal, so an unattended run has no approval
+  step. See [docs/SANDBOXING.md](docs/SANDBOXING.md).
 - Representative trajectories exist for the three agents that ship inside the product. The
   development-time agents are documented as reconstructions, and labelled as such.
-- **Three implementation defects, confirmed with executed reproductions and left unfixed.** Two of
-  the five originally listed here have since been fixed and pinned by regression tests: the
-  environment allowlist now covers all three subprocess invocation sites, not just the harness
-  (`exploit.agent_env`, six secrets asserted absent); and `files_in_patch` now reads `+++ b/...`
-  rather than the git header alone, so POSIX `diff -u`, paths with spaces, renames and
-  `--no-prefix` all parse — previously they returned nothing or the wrong path, silently disabling
-  the contamination scope guard.
+- **One implementation defect, confirmed with an executed reproduction and left unfixed.** Exploit
+  cost strips `#` comments but not docstrings, so a planted docstring still inflates the count past
+  the threshold and grades a known-bad task "too expensive to game".
 
-  What remains, sharing one cause — fingerprinting and cost-pricing match source text, which is too
-  literal an instrument for the question being asked:
-  (i) The contamination scope set is read from the audited patch, so a planted decoy file erases
-  the fingerprint.
-  (ii) Exploit cost ignores `#` comments but not docstrings.
-  (iii) A bundle shipping a `.gitignore` containing `src/` makes every captured diff empty, so
-  every exploit reports as "RESISTED".
+  It is left because `results/multitrial_preregistration.json` **freezes the cost metric**, and
+  changing it after seeing the trials is exactly the tuning pre-registration exists to prevent —
+  the same reason the interval-predicate blind spot in the main failure mode is also left alone.
+  The right repair is the semantic cost measure named there, not another regex, and it invalidates
+  the pre-registered k=5 result.
 
-  Documented rather than patched: the measured regression rate on this repository's
-  security-hardening edits ran at roughly one in two across two review rounds, so an unverified late
-  fix is worth less than a disclosed defect. The right repair is the semantic cost measure named in
-  the main failure mode, not five more regexes.
+  The other four originally listed here are now fixed, each with a regression test that reproduces
+  the defect against the pre-fix code first:
+
+  | Was | Now | Reproduction before the fix |
+  |---|---|---|
+  | Environment allowlist covered the harness, not the agent session | `exploit.agent_env` at all three invocation sites | six secrets asserted absent, `ANTHROPIC_API_KEY` asserted present |
+  | `files_in_patch` parsed only `diff --git` | reads `+++ b/...` | POSIX `diff -u` returned `{}`; a rename returned the *old* path |
+  | Contamination fingerprint subtracted across every file the patch names | subtracted **per file** | a decoy file took the surviving fingerprint from one line to zero, and a side-branch fix reported clean |
+  | A shipped `.gitignore` reading `src/` emptied every captured diff | `git add -f` | measured: 0-byte diff **and** empty `git status`, so it did not even trip the modified-but-no-diff guard |
 

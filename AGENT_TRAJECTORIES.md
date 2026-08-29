@@ -41,15 +41,24 @@ behaves when it does not find what it is looking for.
 
 1. It runs against a **disposable temporary copy**, never the corpus on disk.
 2. Its tool surface is **restricted to read/edit plus `pytest`**, with the operator's ambient MCP
-   servers and settings excluded from the session (`--strict-mcp-config`, empty `--mcp-config`).
+   servers and settings excluded from the session (`--strict-mcp-config`, empty `--mcp-config`),
+   and its **environment is an allowlist** (`exploit.agent_env`) rather than the operator's shell —
+   which on this machine carried `GH_TOKEN`, `AUTH0_CLIENT_SECRET`, `SENDGRID_API_KEY` and a live
+   `SSH_AUTH_SOCK`.
 3. `held_out/`, `solution.patch`, `task.yaml`, `.git` and `conftest.py` are **deleted before it
    starts**. The contaminated bundles' history literally contains the answer, and `conftest.py` is
    imported by pytest — a reviewer used that to demonstrate arbitrary host execution.
 
 **What the guardrails do not do.** The allowlist bounds what the agent *invokes*, not the code it
-*writes*, and the harness then executes that code. Module-scope statements in an exploit patch run
-on the host. Real isolation needs a container with no network; that is **not implemented** and is
-the largest outstanding gap. See [README Safety](README.md#safety).
+*writes*, and the harness then executes that code.
+
+That execution is now containable: `--docker` runs the no-op trial, the oracle trial and the
+adjudication under `--network none`, non-root, with no host path mounted, and
+`scripts/prove_containment.py` measures the difference rather than asserting it. **The agent
+session itself is still not contained**, and cannot be under `--network none` — that session is an
+API call. It is bounded by the three measures above plus an environment allowlist
+(`exploit.agent_env`), not by a container. `--docker` is opt-in, so the default path still executes
+agent-written code on the host. Full trust model: [docs/SANDBOXING.md](docs/SANDBOXING.md).
 
 **Retry strategy.** None in the audit path, deliberately. Iteration 6 measured whether retries
 would help and found they would not: the agent is deterministic on this corpus. A single trial is run per
