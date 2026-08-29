@@ -74,7 +74,8 @@ four round-5 exploits defeated round-4 fixes. An unverified late fix is worse th
 - The exploit trial runs **once** per bundle and its cost is priced by regex. A stochastic agent
   can miss an exploit it would find on a rerun. *k* trials and a semantic cost measure are the
   fixes; neither is implemented.
-- The sandbox is a temp directory, **not a container**. The agent writes a patch and the harness
+- The sandbox is a temp directory, **not a container**. An interactive confirmation now gates the
+  exploit tier and names the risk, but approval is not isolation. The agent writes a patch and the harness
   executes it, so module-scope code in that patch runs on the host. Disclosed, not mitigated.
 - Representative trajectories exist for the two agents that ship inside the product. The
   development-time agents are documented as reconstructions, and labelled as such.

@@ -153,3 +153,60 @@ def test_indeterminate_and_reject_do_not_share_an_exit_code():
     """A CI job gating on 'not zero' would otherwise treat 'this task is broken' and 'I could not
     check this task' identically, though they call for opposite responses."""
     assert EXIT_INDETERMINATE not in (EXIT_ACCEPT, EXIT_DEFECT, EXIT_USAGE)
+
+
+# --- rules 04 and 05: approval before consequential actions ----------------------------
+
+def test_the_host_execution_warning_names_what_it_is_about_to_do(capsys):
+    """Rule 04 asks for approval before the consequential action. The exploit tier was opt-out:
+    host execution ran by default with nothing said."""
+    from rewardgate.cli import confirm_host_execution
+
+    assert confirm_host_execution(DEFAULT_BUNDLES / "csvlite-clean", assume_yes=True)
+    warning = capsys.readouterr().err
+    for claim in ("ON THIS MACHINE", "container is not implemented", "--no-exploit"):
+        assert claim in warning
+
+
+def test_the_free_path_shows_no_host_execution_warning(capsys):
+    """`--no-exploit` executes no agent-written code, so warning about it would be noise that
+    trains the reader to skip the warning that matters."""
+    main(["audit", "csvlite-clean", "--no-exploit"])
+    assert "ON THIS MACHINE" not in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    "decision,expected",
+    [("confirm", EXIT_DEFECT), ("override", EXIT_ACCEPT), ("defer", EXIT_INDETERMINATE)],
+)
+def test_a_reviewer_can_confirm_override_or_defer_a_reject(monkeypatch, decision, expected):
+    """Rule 05. `override` exits 0 on purpose: the tool can be wrong, and a reviewer who has read
+    the evidence outranks it. `defer` exits 3, because undecided must not read as accepted."""
+    from rewardgate.cli import record_review
+    from rewardgate.schema import REJECT
+
+    monkeypatch.setattr("sys.stdin.isatty", lambda: True)
+    monkeypatch.setattr("builtins.input", lambda _: decision)
+    assert record_review(REJECT, assume_yes=False) == (decision, expected)
+
+
+def test_a_non_reject_verdict_asks_the_reviewer_nothing(monkeypatch):
+    """Only a REJECT turns away an author's work, so only a REJECT interrupts."""
+    from rewardgate.cli import record_review
+    from rewardgate.schema import ACCEPT
+
+    monkeypatch.setattr("sys.stdin.isatty", lambda: True)
+    monkeypatch.setattr("builtins.input", lambda _: pytest.fail("should not prompt"))
+    assert record_review(ACCEPT, assume_yes=False) == ("", EXIT_ACCEPT)
+
+
+def test_scripted_use_is_never_blocked_by_either_gate(monkeypatch):
+    """Both gates weaken to a printed warning when stdin is not a terminal. That is a real
+    weakening and it is documented; an interactive prompt in CI would break every documented
+    command and the video."""
+    from rewardgate.cli import record_review
+    from rewardgate.schema import REJECT
+
+    monkeypatch.setattr("sys.stdin.isatty", lambda: False)
+    monkeypatch.setattr("builtins.input", lambda _: pytest.fail("prompted a non-terminal caller"))
+    assert record_review(REJECT, assume_yes=False) == ("", EXIT_DEFECT)

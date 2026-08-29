@@ -73,8 +73,8 @@ Verified against the working tree; every path below exists.
 | 1 | Build with tools you know | ✅ | stdlib + pytest + pyyaml + pyarrow; agent is the Claude Code CLI |
 | 2 | Clear what pre-existed vs what you added | ✅ | 43 commits, all inside the window; SWE-bench fetched not vendored; 15 papers cited |
 | 3 | Licences and service terms | ✅ | MIT `LICENSE`; dataset fetched at runtime, never redistributed |
-| 4 | Consequential actions sandboxed; human approval | ⚠️ | Temp-dir isolation, tool allowlist, artifacts withheld — **but not a container.** Agent-written patch code executes on the host. Disclosed in `README § Safety`, `exploit.py` module docstring, and `SUBMISSION.md` |
-| 5 | Qualified human reviewer in the loop | ⚠️ | `HUMAN CHECKPOINT REQUIRED` banner on every REJECT; the tool never acts on a verdict. Advisory, not enforced in code — stated plainly |
+| 4 | Consequential actions sandboxed; human approval | ✅ | Interactive sessions must type `yes` before the exploit tier runs; the warning names host execution, the missing container, and the cost. Non-interactive callers are warned and proceed, which is a stated weakening. `--no-exploit` needs no approval because it executes nothing. **Still not a container** — that limitation is unchanged and disclosed. |
+| 5 | Qualified human reviewer in the loop | ✅ | An interactive REJECT now requires the reviewer to record **confirm / override / defer**, and the decision is printed into the report and sets the exit code. `override` exits 0: a reviewer who has read the evidence outranks the tool. `defer` exits 3, because undecided must not read as accepted. |
 | 6 | Legal and ethical use case | ✅ | `LICENSE` bounds intended use to pre-submission auditing |
 | 7 | Data you are allowed to share | ✅ | public SWE-bench Verified + self-authored synthetic corpus |
 | 8 | Credentials and private info excluded | ✅ | zero secrets in tree or history; host paths scrubbed |

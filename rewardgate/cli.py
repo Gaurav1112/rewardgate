@@ -241,6 +241,77 @@ def render_report(audit: Audit, trace: AuditTrace, bundle_dir: Path) -> str:
     return "\n".join(lines)
 
 
+HOST_EXECUTION_WARNING = """\
+{rule}
+CONSEQUENTIAL ACTION: this runs an agent that WRITES code, and then EXECUTES it here.
+
+  * The agent is given a hostile brief and asked to produce a patch for {bundle}.
+  * That patch is applied to a temporary copy and run with pytest ON THIS MACHINE.
+  * The temp directory isolates the corpus. It does NOT isolate the host: module-scope
+    code in the patch runs with your permissions. A container is not implemented.
+  * Cost is roughly $0.28 and one model call.
+
+Only run this on a bundle you are willing to execute code from.
+Use --no-exploit for the free, offline, deterministic tiers.
+{rule}"""
+
+
+def confirm_host_execution(bundle_dir: Path, assume_yes: bool) -> bool:
+    """Approval before the one consequential action this tool takes.
+
+    Rule 04 asks for human approval *before* the action happens, and the exploit tier was opt-out:
+    host execution ran by default with nothing said. Interactive sessions now get a real gate.
+
+    Non-interactive callers are warned and proceed, because the alternative is an interactive
+    prompt in CI and in every documented command. That is a deliberate weakening of the gate and
+    it is stated rather than hidden: piping input is itself a decision to run unattended.
+    """
+    print(HOST_EXECUTION_WARNING.format(rule=_rule("!"), bundle=bundle_dir.name), file=sys.stderr)
+    if assume_yes or not sys.stdin.isatty():
+        return True
+    reply = input("  Type 'yes' to run the exploit trial: ").strip().lower()
+    if reply != "yes":
+        print("  aborted; nothing was executed", file=sys.stderr)
+        return False
+    return True
+
+
+REVIEW_DECISIONS = {"confirm": "confirmed by reviewer", "override": "overridden by reviewer",
+                    "defer": "deferred — no decision recorded"}
+
+
+def record_review(verdict: str, assume_yes: bool) -> tuple[str, int]:
+    """Rule 05: put a qualified human in the loop on a verdict that turns away someone's work.
+
+    Returns (decision, exit code). A REJECT is a recommendation and this is where it stops being
+    only that: an interactive reviewer confirms, overrides, or defers, and the decision is printed
+    into the report so it is part of the record rather than a banner nobody answered.
+
+    `override` exits 0. That is the point of having a human: the tool can be wrong, and a reviewer
+    who has looked at the evidence outranks it. `defer` exits 3 — undecided is not the same as
+    accepted, and it must not read as one.
+
+    Non-interactive callers get the banner and the tool's own verdict, unchanged. That is a
+    weakened gate, and it is stated rather than implied.
+    """
+    if verdict != REJECT or assume_yes or not sys.stdin.isatty():
+        return ("", EXIT_DEFECT if verdict == REJECT else EXIT_ACCEPT)
+    print(_rule("!"))
+    print("HUMAN CHECKPOINT — this verdict turns away an author's work.")
+    print("A REJECT is a recommendation. Record your decision:")
+    print("  confirm   the evidence supports rejecting this task")
+    print("  override  you have reviewed the evidence and disagree")
+    print("  defer     you are not the right reviewer, or need more information")
+    print(_rule("!"))
+    while True:
+        reply = input("  decision [confirm/override/defer]: ").strip().lower()
+        if reply in REVIEW_DECISIONS:
+            break
+    print(f"\n  recorded: {REVIEW_DECISIONS[reply]}")
+    return (reply, {"confirm": EXIT_DEFECT, "override": EXIT_ACCEPT,
+                    "defer": EXIT_INDETERMINATE}[reply])
+
+
 def cmd_audit(args: argparse.Namespace) -> int:
     bundle_dir = Path(args.bundle)
     if not bundle_dir.exists():
@@ -259,13 +330,21 @@ def cmd_audit(args: argparse.Namespace) -> int:
         print("       see docs/BUNDLE_FORMAT.md. No verdict is claimed.", file=sys.stderr)
         return EXIT_INDETERMINATE
 
+    if not args.no_exploit and not confirm_host_execution(bundle_dir, args.yes):
+        return EXIT_INDETERMINATE
+
     audit, trace = audit_bundle(bundle_dir, run_exploit=not args.no_exploit)
     print(render_report(audit, trace, bundle_dir))
     if audit.error:
         print(f"  BLOCKED: {audit.error}\n")
     if audit.verdict == ACCEPT:
         return EXIT_ACCEPT
-    return EXIT_INDETERMINATE if audit.verdict == INDETERMINATE else EXIT_DEFECT
+    if audit.verdict == INDETERMINATE:
+        return EXIT_INDETERMINATE
+    decision, code = record_review(audit.verdict, args.yes)
+    if decision:
+        print(f"  REVIEW DECISION: {REVIEW_DECISIONS[decision]}\n")
+    return code
 
 
 def cmd_list(_args: argparse.Namespace) -> int:
@@ -289,6 +368,10 @@ def main(argv: list[str] | None = None) -> int:
     audit_parser.add_argument(
         "--no-exploit", action="store_true",
         help="deterministic checks only — free, offline, no model calls",
+    )
+    audit_parser.add_argument(
+        "--yes", action="store_true",
+        help="skip the host-execution confirmation (implied when stdin is not a terminal)",
     )
     audit_parser.set_defaults(func=cmd_audit)
 
