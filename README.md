@@ -115,7 +115,7 @@ Both see the same bundles, emit the same schema, and are scored by the same func
 | **Capability** | It can *settle* `REWARD_HACKABLE`. The baseline can only form an opinion about it; the pipeline writes an exploit patch, runs it, and shows the visible suite green while the held-out suite is red. Under the fair (parity) comparison this is also the only class where the two differ: F1 **0.800** vs **0.667**. |
 | **Reliability** | Every positive verdict carries a mechanical artifact — an exit code, a commit SHA, an exploit patch. Nothing rests on a model's assertion, which matters given a measured **18.5% evaluator–human misalignment rate** in LLM-as-judge ([arXiv:2607.02577](https://arxiv.org/abs/2607.02577)). |
 | **Coverage** | Two of three classes are settled **deterministically at $0.00**, so they can run in CI on every task, not just on a sample. |
-| **Engineering quality** | A check that cannot run returns `INDETERMINATE`, never `ACCEPT` — including on `--no-exploit`, where only two of three classes are examined. 255 tests, exit codes that distinguish "broken" from "uncheckable", and a documented bundle contract. |
+| **Engineering quality** | A check that cannot run returns `INDETERMINATE`, never `ACCEPT` — including on `--no-exploit`, where only two of three classes are examined. 258 tests, exit codes that distinguish "broken" from "uncheckable", and a documented bundle contract. |
 
 **And the honest limit, stated here rather than buried.** On the primary metric the advantage is
 small: macro-F1 **0.933** against a fair baseline's **0.889** on 15 bundles, one discordant
@@ -467,7 +467,7 @@ Full instructions, including a **free path that needs no API key**, are in
 uv sync
 ./scripts/fetch_real_corpus.sh          # 2.0 MB, checksum-pinned
 uv run python corpus/synthetic/build.py # 15 bundles, labels by construction
-uv run pytest -q                        # 255 tests; pins every third-party-corpus number
+uv run pytest -q                        # 258 tests; pins every third-party-corpus number
 uv run python -m rewardgate.report_real # third-party findings, $0.00
 uv run python -m rewardgate.evaluate --replay   # re-score saved audits offline, $0.00
 ```

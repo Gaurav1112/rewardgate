@@ -351,6 +351,11 @@ def test_a_fix_on_a_deleted_branch_is_still_found(tmp_path):
     assert detect_git_contamination(bundle, patch).contaminated, "deleted branch hid the fix"
 
 
+@pytest.mark.skipif(
+    not (Path(__file__).resolve().parent.parent / "corpus" / "synthetic" / "bundles"
+         / "csvlite-clean").exists(),
+    reason="run: uv run python corpus/synthetic/build.py",
+)
 def test_a_check_that_could_not_run_renders_BLOCKED_not_ok(tmp_path, capsys):
     """The `[BLOCKED]` branch shipped with no test and its mutant survived, so a gold patch that
     fails to apply rendered green again — the regression the branch was written to prevent."""

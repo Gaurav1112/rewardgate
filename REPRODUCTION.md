@@ -73,7 +73,7 @@ on this machine**, so in a terminal it first requires you to type `yes`; `--yes`
 uv run pytest -q
 ```
 
-Expected: `255 passed`, in roughly 10–16 seconds.
+Expected: `258 passed`, in roughly 10–16 seconds.
 
 What a green suite does and does not verify. It pins **every third-party-corpus number** — the
 133/500 leakage figure, the 42.0% at-least-one-defect rate, and the specific instance *ids*, not
@@ -91,7 +91,7 @@ uv run python -m rewardgate.report_real
 
 Runs the four deterministic checkers across all 500 real instances. No model calls, no cost.
 
-Expect these five lines among the output (the full block adds a header, a clean-on-all-checks row, and an INDETERMINATE limitation note):
+Expect these lines among the output:
 
 ```
 solution leakage (gold file named)     133/500  ( 26.6%)  cf. published 135 (different heuristic: theirs also counts imports, mine counts basenames)
@@ -131,7 +131,8 @@ Expected: `baseline macro-F1=0.600` and
 uv run python -m rewardgate.significance
 ```
 
-Expected: `McNemar exact p = 0.2500 — NOT significant at alpha=0.05`, with 3 discordant pairs.
+Expected: JSON containing `"p_value": 0.25` and 3 discordant pairs — not significant at
+alpha = 0.05. The module prints the machine-readable form; the interpretation is in the README.
 
 ### A6. Reproduce the ablation that refutes the headline
 
@@ -143,7 +144,7 @@ Re-scores the committed parity audits. **$0.00, under a second.** This is the mo
 result in the report, so it has a free path: a judge should not have to take the retraction on
 trust any more than the original claim.
 
-Expect these five lines among the output (the full block adds a header, a clean-on-all-checks row, and an INDETERMINATE limitation note):
+Expect these lines among the output:
 
 ```
 SYSTEM                            macro-F1   CONTAM F1   exact      cost

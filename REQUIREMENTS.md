@@ -18,7 +18,7 @@ Verified against the working tree; every path below exists.
 |---|---|---|
 | Repository obtainable | `github.com/Gaurav1112/rewardgate`, public | **PASS** |
 | Archive | built on demand with `git archive --format=zip --prefix=rewardgate/ HEAD -o rewardgate-submission.zip`; last build verified to run standalone (`uv sync && pytest` inside the extracted copy) | **PASS (built at submission time, not committed)** |
-| Tests | `uv run pytest -q` → 255 passed, ~11s, no API key | **PASS** |
+| Tests | `uv run pytest -q` → 258 passed, ~11s, no API key | **PASS** |
 | README | [README.md](README.md) — user, bottleneck, why it matters | **PASS** |
 | Agent-use evidence | [AGENT_TRAJECTORIES.md](AGENT_TRAJECTORIES.md), [`trajectories/`](trajectories/) | **PASS** |
 | Demo video | [`rewardgate-demo.mp4`](rewardgate-demo.mp4), 4:47, tracked in-repo | **PASS** |
@@ -119,7 +119,7 @@ review rounds, and an unverified late fix is worth less than a disclosed defect.
 | macro-F1 0.600 baseline / 0.933 RewardGate | `uv run python -m rewardgate.evaluate --replay` |
 | Parity: 0.889 vs 0.933, gap 0.044, p = 1.00 | `uv run python scripts/run_parity_ablation.py --replay` |
 | McNemar p = 0.2500, 3 discordant | `uv run python -m rewardgate.significance` |
-| Every third-party corpus number is pinned | `uv run pytest -q` → 255 passed |
+| Every third-party corpus number is pinned | `uv run pytest -q` → 258 passed |
 | Cost $0.1174 / $0.2551 per bundle | `results/summary.json` |
 | CLI overhead $0.1967 before any work | `results/cli_overhead_probe.json` |
 

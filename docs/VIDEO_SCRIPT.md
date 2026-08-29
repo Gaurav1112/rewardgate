@@ -9,6 +9,13 @@ executed against this repository before it was written down.
 
 ---
 
+> **Which file is the shipped video?** The mp4 in the repository is rendered from the narration
+> constants in [`scripts/video/build.py`](../scripts/video/build.py), not from this document. The
+> two say the same things and quote the same numbers, but they are not word-identical and the
+> section boundaries differ by a few seconds. This file is the teleprompter for re-recording in a
+> human voice; `build.py` is what the current synthetic take reads. Whichever you record from, the
+> other should be updated to match.
+
 # Part A — teleprompter
 
 **Total spoken: 704 words. 4:42 of narration, plus a 4-second landing card. 14 seconds of slack.**
@@ -130,7 +137,7 @@ Read it flat. Short sentences. Do not perform the reversals as apologies. They a
 **Landing card, 4:42 to 4:46, silent, not read aloud:**
 
 ```
-255 tests pass
+258 tests pass
 github.com/Gaurav1112/rewardgate
 ```
 
@@ -472,12 +479,12 @@ better over the `$0.00` column than over a title card.
 **4:42–4:46, landing card.** Cut to a plain slide:
 
 ```
-255 tests pass
+258 tests pass
 github.com/Gaurav1112/rewardgate
 ```
 
-If you would rather prove the 255 than assert it, run `uv run pytest -q` and hold on
-`255 passed in 9.63s`. **This is the one command in the video that takes about ten seconds.** Only
+If you would rather prove the 258 than assert it, run `uv run pytest -q` and hold on
+`258 passed in 9.63s`. **This is the one command in the video that takes about ten seconds.** Only
 do it if you are under 4:30 at that point, and run it once before recording so the import cache is
 warm.
 

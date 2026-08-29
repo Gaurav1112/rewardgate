@@ -4,7 +4,8 @@
 # This corpus is NOT authored by this project. It is the third-party ground truth used to
 # demonstrate that RewardGate's detectors are not tuned to defects the author planted.
 #
-# Licence: SWE-bench is released under the MIT Licence by Princeton NLP.
+# Licence: The SWE-bench harness is MIT-licensed by Princeton NLP. The dataset card carries no explicit
+# licence tag, and instances derive from their upstream projects' licences -- see LICENSE.
 # Source:  https://huggingface.co/datasets/princeton-nlp/SWE-bench_Verified
 set -euo pipefail
 

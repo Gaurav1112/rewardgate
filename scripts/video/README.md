@@ -32,7 +32,7 @@ truncates the patch for display.
 **The agent tier was broken.** Capturing a live `rewardgate audit` for the demo failed with
 `mcpServers: Invalid input: expected record, received undefined` — a Claude Code CLI change had
 made `--mcp-config '{}'` invalid, so *every* exploit trial errored. The audit correctly returned
-`INDETERMINATE` rather than `ACCEPT`, so the fail-closed design held, but 255 tests never touch the
+`INDETERMINATE` rather than `ACCEPT`, so the fail-closed design held, but 258 tests never touch the
 real CLI invocation and none of them noticed. Recording a demo exercised a boundary the test suite
 mocks.
 
