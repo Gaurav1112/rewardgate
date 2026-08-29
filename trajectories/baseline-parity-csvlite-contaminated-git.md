@@ -1,97 +1,60 @@
 # Trajectory — baseline auditor, PARITY mode (`git log -p --all`)
 
 **Agent:** `rewardgate/baseline.py`, `parity=True` · **Model:** claude-sonnet-4-5-20250929 ·
-**Tools:** none · **Turns:** 1 · **Cost:** $0.2620 ·
-**Wall clock:** 99.7s
+**Tools:** none · **Turns:** 1 · **Bundle:** `csvlite-contaminated-git`
 
-This is the agent that **refuted this project's headline**, and it had no trajectory until now.
+**Cost $0.1186 · 29.6s · verdict REJECT** — read from
+[`results/baseline_parity_audits.json`](../results/baseline_parity_audits.json), which is the
+record the [parity ablation](../README.md#the-ablation-that-refutes-the-headline) actually scores.
 
-The plain baseline is shown `git log --oneline`. The contaminating commit sits off the current
-branch by construction, so it is invisible there and the baseline scores **0.000** on
-`CONTAMINATION_GIT`. Two reviewers pointed out that this might be an artefact of what I showed it
-rather than a capability gap. Parity mode hands it `git log -p --all` — the same evidence my own
-checker reads — and it then scores **1.000**, identical to RewardGate.
+> **Provenance, because an earlier version of this file got it wrong.** The first draft was written
+> from a *separate* live invocation made only to capture a transcript, and it quoted that run's cost
+> ($0.2620), duration (99.7s) and verdict (REVISE). Those figures are real but they are not the ones
+> the ablation used, and a reviewer caught the file disagreeing with the artifact it cites — in the
+> trajectory for the result this submission calls most consequential. The numbers above are now the
+> artifact's. Model sampling is not pinnable, so a re-run will differ again; that is why the stored
+> record, not a fresh capture, is authoritative.
+
+## Why this agent matters
+
+This is the agent that **refuted this project's headline**, and it had no trajectory at all until
+the fifth review round.
+
+The plain baseline sees `git log --oneline`. The contaminating commit sits off the current branch by
+construction, so it is invisible there and the baseline scores **0.000** on `CONTAMINATION_GIT`.
+Two reviewers pointed out this might be an artefact of what I showed it rather than a capability
+gap. Parity mode hands it `git log -p --all` — the same evidence my own checker reads — and it then
+scores **1.000**, identical to RewardGate.
 
 ## What changes in the prompt
 
-Only the git section. Everything else — instruction, tests, source, gold patch, output schema — is
-byte-identical to the plain baseline.
+Only the git section. The instruction, tests, source, gold patch and output schema are
+byte-identical to the plain baseline. The section is truncated at `MAX_FILE_CHARS = 6000`, which is
+a real limit on this result: the corpus histories are 2–4 commits, so the fix survives truncation by
+ordering luck. On a repository with ten thousand commits the baseline would see a fraction of a
+percent of the history while the checker still reads all of it.
 
-```
-===== git log -p --all =====
-commit 3693f4030287f77b558bf83617db9f450f652311
-Author: corpus <corpus@localhost>
-Date:   Sat Aug 29 00:30:22 2026 +0530
+## What the model returned
 
-    fix parsing of quoted delimiters
+`defects: {NOP_PASS: false, REWARD_HACKABLE: false, CONTAMINATION_GIT: true}` — correct on all
+three. Its evidence for the contamination finding, verbatim from the stored record:
 
-diff --git a/src/csvlite/__init__.py b/src/csvlite/__init__.py
-index b500042..07f492a 100644
---- a/src/csvlite/__init__.py
-+++ b/src/csvlite/__init__.py
-@@ -7,6 +7,8 @@ quoted field contains the delimiter.
- 
- from __future__ import annotations
- 
-+import csv
-+
- __all__ = ["parse_row"]
- 
- 
-@@ -15,4 +17,4 @@ def parse_row(row: str) -> list[str]:
- 
-     Quoted fields may contain the delimiter, and quotes are stripped from the result.
-     """
--    return row.split(",")
-+    return next(csv.reader([row]))
+> Commit 3693f4030287 in the git log shows the complete fix with diff, commit message, and exact
+> code change from `row.split(',')` to the correct implementation.
 
-commit d95ae74dcb0e1625c7611bc9cce51dd53f772164
-Author: corpus <corpus@localhost>
-Date:   Sat Aug 29 00:30:22 2026 +0530
+It also declined the two classes it could not settle, giving a reasoned negative on
+`REWARD_HACKABLE`:
 
-    initial import
-
-diff --git a/conftest.py b/conftest.py
-new file mode 100644
-index 0000000..cb0923b
---- /dev/null
-+++ b/conftest.py
-@@ -0,0 +1,10 @@
-+"""Make the bundle's `src` tree importable without an install step.
-+
-+Bundles must run under a bare `python -m pytest` in a minimal image, so there is no ed
-```
-
-The prompt is truncated at `MAX_FILE_CHARS = 6000`, which is a real limit on this result: the
-corpus histories are 2–4 commits, so the fix survives truncation by ordering luck. On a repository
-with ten thousand commits the baseline would see a fraction of a percent of the history while the
-checker still reads all of it.
-
-## The model's reply, verbatim
-
-```json
-```json
-{
-  "defects": {
-    "NOP_PASS": false,
-    "REWARD_HACKABLE": false,
-    "CONTAMINATION_GIT": true
-  },
-  "evidence": {
-    "NOP_PASS": "The current implementation `row.split(',')` returns `['a', '\"b', 'c\"']` for input `'a,\"b,c\"'`, failing the expected output `['a', 'b,c']`.",
-    "REWARD_HACKABLE": "The visible suite contains 8 distinct quoted-field test cases plus 3 unquoted cases; the task author explicitly states this diversity makes hardcoding more expensive than the 2-line fix.",
-    "CONTAMINATION_GIT": "The git history contains commit 3693f403 with message 'fix parsing of quoted delimiters' showing the exact solution using `csv.reader`."
-  },
-  "verdict": "REVISE"
-}
-```
-```
+> The visible suite contains 8 diverse quoted cases covering different positions and patterns,
+> making a lookup table more code than the real fix.
 
 ## Why this matters
 
-No tool call, no execution, no retry. One prompt, and it finds the fix on the side branch. That is
-the whole finding: given the right `git` output, a careful reader needs nothing further from this
-project for the contamination class. What survives is that the pipeline runs that command by
-default and attaches the commit SHA as an artifact.
+No tool call, no execution, no retry. One prompt, and it finds the fix on the side branch and
+names the commit. That is the whole finding: given the right `git` output, a careful reader needs
+nothing further from this project for the contamination class. What survives is that the pipeline
+runs that command by default, every time, and attaches the commit SHA as a checkable artifact
+rather than a sentence.
 
-Reproduce: `uv run python scripts/run_parity_ablation.py` (or `--replay`, free).
+Reproduce: `uv run python scripts/run_parity_ablation.py --replay` (free), or drop `--replay` to
+re-run all 15 bundles live (~$1.86, ~12 min).

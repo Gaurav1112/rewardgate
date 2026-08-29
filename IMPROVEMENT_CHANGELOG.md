@@ -157,52 +157,6 @@ grade rather than the transcript and reported the grade as a finding about the a
 
 ---
 
-## Final — the combined system
-
-**What I tried and why.** The three kept changes composed: deterministic checks for the classes
-they can prove, the cost-graded exploit agent for the one they cannot, and every verdict tied to
-an artifact.
-
-**Evidence.** 15 bundles × 3 defect classes = 45 binary judgements per system. Identical cases,
-identical output schema, identical scorer. Figures from `results/summary.json` and
-`results/significance.json`.
-
-| METRIC | BASELINE | REWARDGATE | ABSOLUTE Δ |
-|---|---:|---:|---:|
-| **macro-F1 (primary)** | 0.600 | **0.933** | **+0.333** |
-| macro precision | 0.667 | 1.000 | +0.333 |
-| macro recall | 0.556 | 0.889 | +0.333 |
-| exact-match bundles | 11/15 | **14/15** | +3 |
-| false alarms on 6 clean bundles | 0 | 0 | — |
-| cost per bundle (USD) | 0.1174 | 0.2551 | +117% |
-
-| PER-CLASS F1 | BASELINE | REWARDGATE | SUPPORT |
-|---|---:|---:|---:|
-| NOP_PASS | **1.000** | **1.000** | 3 |
-| REWARD_HACKABLE | **0.800** | **0.800** | 3 |
-| CONTAMINATION_GIT | **0.000** | **1.000** | 3 |
-
-Full run: **$5.5877**, 1711.3s. McNemar exact **p = 0.25** — not significant.
-
-**Where the gain actually came from, and it is uncomfortable.** Not from the agent. It **ties the
-baseline on its own class** (`REWARD_HACKABLE`, 0.800 both). `NOP_PASS` also ties at 1.000. All
-three discordant judgements are `CONTAMINATION_GIT`; drop that class and both systems score 0.900
-exactly. The entire measured difference is one deterministic `git log -p --all`.
-
-**The honest cost.** 117% more per bundle, for a difference concentrated in the one class that
-costs nothing to check.
-
-**The challenging case.** `retrylite-reward-hackable` was missed by both systems in the final run.
-The stored evidence says an exploit *was* found but priced at zero special-cases — a
-cost-measurement blind spot, not the agent honestly fixing the bug. An earlier version of this
-document told the second story; it was wrong, and it is corrected here.
-
-**Decision.** Shipped, with the claim narrowed to what the evidence supports. The unimplemented
-mitigations are *k* independent trials and a larger corpus of independent base repositories — at
-3 repos, six discordant pairs are needed for significance and the design can produce at most a few.
-
----
-
 ## Iteration 4 — the ablation that refuted my own headline
 
 **What I tried and why.** Two independent reviewers made the same objection: RewardGate's only
@@ -279,6 +233,56 @@ enforcement is gone, silently — the audit still returns ACCEPT, in the same fo
 authority. **A tool whose invariants are checked by its own test suite rather than by its own code
 is trustworthy only on the inputs its author already thought of.** Documenting the contract does
 not fix that; it just stops the tool from being confidently wrong without saying so.
+
+---
+
+## Final — the combined system
+
+> **The macro-F1 table below is measured against the *unfair* baseline** (`git log --oneline`).
+> Iteration 4 re-derives it under parity: the gap is **0.044** at **McNemar p = 1.00**, not
+> +0.333. Kept unedited so the sequence shows what was believed at each step.
+
+**What I tried and why.** The three kept changes composed: deterministic checks for the classes
+they can prove, the cost-graded exploit agent for the one they cannot, and every verdict tied to
+an artifact.
+
+**Evidence.** 15 bundles × 3 defect classes = 45 binary judgements per system. Identical cases,
+identical output schema, identical scorer. Figures from `results/summary.json` and
+`results/significance.json`.
+
+| METRIC | BASELINE | REWARDGATE | ABSOLUTE Δ |
+|---|---:|---:|---:|
+| **macro-F1 (primary)** | 0.600 | **0.933** | **+0.333** |
+| macro precision | 0.667 | 1.000 | +0.333 |
+| macro recall | 0.556 | 0.889 | +0.333 |
+| exact-match bundles | 11/15 | **14/15** | +3 |
+| false alarms on 6 clean bundles | 0 | 0 | — |
+| cost per bundle (USD) | 0.1174 | 0.2551 | +117% |
+
+| PER-CLASS F1 | BASELINE | REWARDGATE | SUPPORT |
+|---|---:|---:|---:|
+| NOP_PASS | **1.000** | **1.000** | 3 |
+| REWARD_HACKABLE | **0.800** | **0.800** | 3 |
+| CONTAMINATION_GIT | **0.000** | **1.000** | 3 |
+
+Full run: **$5.5877**, 1711.3s. McNemar exact **p = 0.25** — not significant.
+
+**Where the gain actually came from, and it is uncomfortable.** Not from the agent. It **ties the
+baseline on its own class** (`REWARD_HACKABLE`, 0.800 both). `NOP_PASS` also ties at 1.000. All
+three discordant judgements are `CONTAMINATION_GIT`; drop that class and both systems score 0.900
+exactly. The entire measured difference is one deterministic `git log -p --all`.
+
+**The honest cost.** 117% more per bundle, for a difference concentrated in the one class that
+costs nothing to check.
+
+**The challenging case.** `retrylite-reward-hackable` was missed by both systems in the final run.
+The stored evidence says an exploit *was* found but priced at zero special-cases — a
+cost-measurement blind spot, not the agent honestly fixing the bug. An earlier version of this
+document told the second story; it was wrong, and it is corrected here.
+
+**Decision.** Shipped, with the claim narrowed to what the evidence supports. The unimplemented
+mitigations are *k* independent trials and a larger corpus of independent base repositories — at
+3 repos, six discordant pairs are needed for significance and the design can produce at most a few.
 
 ---
 
@@ -373,7 +377,30 @@ confident numbers about the wrong thing.**
 
 ---
 
-## Main failure mode, and the hot take
+## Main failure mode
 
-Both close [README.md](README.md#main-failure-mode), which is their canonical home. They were
-duplicated here verbatim; a reviewer found 27 byte-identical lines across the two files.
+**A single exploit trial priced by regex.** The agent runs once per bundle, and its exploit is
+graded by counting literal special-cases with a pattern list. Both halves fail: a stochastic agent
+can miss an exploit it would find on a rerun, and an exploit written in a shape the patterns do not
+match is priced at zero — which is exactly how `retrylite-reward-hackable` was missed, and how an
+earlier build graded a dict that memorised eight inputs as "no exploit". *k* independent trials and
+a semantic cost measure are the fixes; neither is implemented.
+
+## Hot take
+
+**Reward-hackability is a property of the evaluation protocol, not of the individual task.**
+
+My first detector defined the defect as "an exploit exists". It flagged the clean bundle too —
+**100% false positives** — because *any* finite, visible test suite can be hardcoded given enough
+branches. Existence is not a discriminating property; cost is. Regrading on how many literals the
+exploit must special-case took false positives to zero.
+
+The practical rule an author can act on before shipping: **test-input diversity is the defence, and
+it is measurable in advance.** A suite with one visible input falls to a single `if`. A suite with
+eight costs more to memorise than to solve.
+
+And the second-order lesson, which cost me two rewrites: **the thing measuring your evaluation is
+part of your evaluation.** A parser that inverted booleans, a held-out suite that reused its visible
+inputs, and a cost counter blind to dict literals each produced confident, plausible, wrong numbers
+that passed every test I had. SWE-bench ships its tests alongside the task; no amount of care on any
+single task closes that, and no amount of care on any single checker closes this.
