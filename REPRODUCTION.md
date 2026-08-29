@@ -160,6 +160,44 @@ discordant: semverlite-nop-pass/REWARD_HACKABLE
 To regenerate rather than replay, drop `--replay`: 15 fresh model calls, **~$1.86, ~12 minutes**,
 and it needs an API key (Path B).
 
+### A8. Verify the sandbox actually sandboxes — optional, needs a container engine
+
+Still no API key, but this one needs Docker (or a compatible engine) and one image build, so it is
+last in Path A rather than first.
+
+```bash
+docker build -t rewardgate-sandbox:1 docker/      # ~40s, needs network once
+uv run python scripts/prove_containment.py        # $0.00, ~15s
+```
+
+The script builds a bundle whose test module tries three things an exploit patch would try, runs it
+**on the host and in the container**, and prints the difference. Expect:
+
+```
+PROBE             HOST                              CONTAINED
+==========================================================================
+network           reachable                         blocked (OSError)
+host_write        written                           blocked (FileNotFoundError)
+uid               501                               1000
+is_root           False                             False
+canary_on_disk    True                              False
+secrets_visible   []                                []
+```
+
+`uid` will differ on your machine — it is whatever your account is. The rows that matter are
+`network` and `canary_on_disk`, and they must differ between the two columns; if the host row also
+reads `blocked`, the script says so rather than claiming a result it did not demonstrate.
+
+Then use it for real:
+
+```bash
+uv run rewardgate audit csvlite-clean --no-exploit --docker
+```
+
+If the engine or image is missing this exits **2** with the build command rather than falling back
+to host execution. Nothing about `--docker` is asserted from flags alone —
+[docs/SANDBOXING.md](docs/SANDBOXING.md) states what it does and does not cover.
+
 ---
 
 ## Path B — re-run the agent trials
