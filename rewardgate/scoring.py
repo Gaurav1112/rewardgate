@@ -159,4 +159,14 @@ def format_comparison(baseline: Score, advanced: Score) -> str:
         lines.append(
             f"{after.defect:<28}{before.f1:>12.3f}{after.f1:>14.3f}{after.support:>12}"
         )
+    # This table compares against the baseline shown `git log --oneline`, which cannot see a fix
+    # on a side branch. A reviewer pointed out that the one command the README tells a judge to run
+    # was printing CONTAMINATION_GIT 0.000 vs 1.000 with no hint that the README retracts it.
+    lines += [
+        "",
+        "NOTE: this baseline sees `git log --oneline` and cannot see a side-branch fix.",
+        "      Given `git log -p --all` it scores CONTAMINATION_GIT 1.000 and macro-F1 0.889,",
+        "      leaving a gap of 0.044 at McNemar exact p = 1.00 (not significant).",
+        "      Reproduce: uv run python scripts/run_parity_ablation.py --replay",
+    ]
     return "\n".join(lines)

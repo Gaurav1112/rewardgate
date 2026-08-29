@@ -228,67 +228,13 @@ output schema, identical scorer. All figures below come from
 **Primary metric: macro-F1.** Macro because the classes are unbalanced; F1 rather than accuracy
 because most pairs are negatives, so a system flagging nothing would score well on accuracy.
 
-> **This table is superseded — do not quote the +0.333.** It compares against a baseline shown
-> `git log --oneline`, which cannot see a fix parked on a side branch. Given the *same* evidence the
-> baseline scores **0.889** and the real gap is **0.044** at **p = 1.00**. The fair comparison is
-> [below](#the-ablation-that-refutes-the-headline). This table is kept because the changelog should
-> show what I measured before I tested my own assumption, not only after.
+An earlier version of this section led with **+0.333 macro-F1**, measured against a baseline shown
+only `git log --oneline` — which cannot see a fix parked on a side branch. That comparison was
+unfair. It is superseded by the ablation below, and the retired table, the per-class breakdown and
+the reasoning that retired it are preserved in
+[IMPROVEMENT_CHANGELOG.md](IMPROVEMENT_CHANGELOG.md).
 
-| METRIC | BASELINE (unfair) | REWARDGATE | ABSOLUTE Δ |
-|---|---:|---:|---:|
-| **macro-F1 (primary)** | 0.600 | **0.933** | **+0.333** |
-| macro precision | 0.667 | 1.000 | +0.333 |
-| macro recall | 0.556 | 0.889 | +0.333 |
-| exact-match bundles | 11/15 | **14/15** | +3 bundles |
-| false alarms on 6 clean bundles | 0 | 0 | — |
-| cost per bundle (USD) | 0.1174 | 0.2551 | +117% |
-
-| PER-CLASS F1 | BASELINE | REWARDGATE | SUPPORT |
-|---|---:|---:|---:|
-| NOP_PASS | **1.000** | **1.000** | 3 |
-| REWARD_HACKABLE | **0.800** | **0.800** | 3 |
-| CONTAMINATION_GIT | **0.000** | **1.000** | 3 |
-
-Full run: **$5.5877**, 1711.3s (28.5 min) wall clock.
-
-### Read this before the headline: the difference is one `git` command
-
-Absolute deltas are given above rather than percentages, because percentage change off a 0.000
-denominator manufactures magnitude. And the per-class table is the real result:
-
-> **Superseded below.** Everything in this subsection is measured against the *unfair* baseline
-> (`git log --oneline`). The parity ablation re-derives it and reverses part of it. Kept because
-> the changelog should show what I believed at each step, not only the final state.
-
-**The agent ties the baseline on its own defect class.** `REWARD_HACKABLE` is 0.800 for both. The
-adversarial exploit agent — the expensive, novel component, at 117% higher cost — did not beat a
-careful reader at the one thing it exists to do.
-
-**`NOP_PASS` also ties at 1.000.** A suite that only asserts a module imports is visibly inadequate
-on the page; executing it proves nothing that reading did not.
-
-**Every measured judgement that separates the two systems is `CONTAMINATION_GIT`.** All 3
-discordant pairs are that class. Drop it and both systems score **0.900 exactly**
-([`results/significance.json`](results/significance.json)). The baseline sees `git log --oneline`,
-which is innocent because the fix sits on a side branch; only `git log -p --all` finds it. That is
-a command, not a judgement, and it costs nothing.
-
-### The difference is not statistically significant
-
-Run `uv run python -m rewardgate.significance`:
-
-| | |
-|---|---|
-| McNemar exact, two-sided | **p = 0.25** (3 discordant, all favouring RewardGate) |
-| Paired accuracy, baseline | 0.911 [0.788, 0.975] |
-| Paired accuracy, RewardGate | 0.978 [0.882, 0.999] — **intervals overlap** |
-| False-alarm rate on clean bundles | 0/6, but CI [0.000, **0.459**] |
-| always-yes floor | macro-F1 **0.333** — the floor is not zero |
-
-With all discordance one-way, McNemar gives `p = 2 × 0.5ⁿ`, so **six** discordant pairs are needed
-for p < 0.05. This design produced three. The experiment cannot reach significance at this size —
-that is a property of using 15 bundles built from **3 independent base repositories**, not a
-property of the result. "1.000 precision" is consistent with a true false-alarm rate up to 46%.
+Full run: **$5.5877**, 1711.3s wall clock, 45 paired judgements per system.
 
 ### The ablation that refutes the headline
 

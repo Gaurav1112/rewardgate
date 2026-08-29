@@ -83,29 +83,20 @@ four round-5 exploits defeated round-4 fixes. An unverified late fix is worse th
   executes it, so module-scope code in that patch runs on the host. Disclosed, not mitigated.
 - Representative trajectories exist for the three agents that ship inside the product. The
   development-time agents are documented as reconstructions, and labelled as such.
-- **The environment allowlist covers the harness, not the agent.** `execution._test_env()` passes
-  exactly `PATH HOME LANG LC_ALL TMPDIR PYTHONPATH PYTHONHASHSEED` and a reviewer confirmed injected
-  `GH_TOKEN` / `SSH_AUTH_SOCK` / `AWS_SECRET_ACCESS_KEY` canaries do not reach it. But
-  `exploit._run_agent` and `baseline.audit_bundle` invoke the `claude` CLI with no `env=` at all, so
-  the agent session inherits the full shell environment — and since the agent holds
-  `Bash(python -m pytest:*)`, any pytest it launches re-inherits it too. An earlier commit message
-  in this repository implied the leak was closed everywhere. It is closed in the adjudication path
-  only. Confirmed, not fixed.
-- **Two more paths reach ACCEPT with the held-out suite unmeasured.** If the agent's diff cannot be
-  captured, or if the *visible* suite fails to collect, the `elif` guard in `auditor.py` is skipped
-  entirely — there is no `visible_ran` analogue to the gate's `nop_ran`. A bundle shipping a
-  `.gitignore` containing `src/` survives `materialise` and `_prepare_sandbox`, makes every captured
-  diff empty, and reports every exploit as "RESISTED (no exploit found)". Confirmed, not fixed.
-- **The contamination scope set is read from the audited patch.** `files_in_patch(solution_patch)`
-  decides which files are subtracted from the fingerprint, and the bundle author writes that patch.
-  A reviewer demonstrated a contaminated bundle certifying clean by appending a hunk for a planted
-  decoy file whose shipped body contains the fix as ordinary code. The subtraction should compare
-  against the pre-image of the hunk it actually applies to. Confirmed, not fixed.
-- **Exploit cost is still not invariant to non-executable text.** Comment stripping handles `#` but
-  not docstrings, so three `Example: row == "a,b,c"` lines inside a `"""` block price as three
-  special-cases and flip REVISE to ACCEPT. The hand-rolled quote scanner also desyncs on
-  `'''`-with-apostrophe. This needs `tokenize`, not regex. Confirmed, not fixed.
-- **`files_in_patch` parses only `diff --git a/<no-spaces>`.** POSIX `diff -u`, `--no-prefix`,
-  quoted paths and renames all yield an empty or wrong set, which silently disables the subtraction
-  above. No corpus bundle exercises it, so no test catches it. Confirmed, not fixed.
-- The synthetic comparison is n=15 on three self-authored micro-repos. It is not a general claim.
+- **Five implementation defects in the detector family, confirmed with executed reproductions and
+  left unfixed.** They share one cause: fingerprinting and cost-pricing are done by matching source
+  text, which is too literal an instrument for the question being asked.
+  (i) The environment allowlist covers the harness, not the agent session — `exploit._run_agent`
+  and `baseline.audit_bundle` invoke the CLI with no `env=`.
+  (ii) The contamination scope set is read from the audited patch, so a planted decoy file erases
+  the fingerprint.
+  (iii) Exploit cost ignores `#` comments but not docstrings.
+  (iv) `files_in_patch` parses only the `diff --git` header form, silently disabling (ii)'s guard.
+  (v) A bundle shipping a `.gitignore` containing `src/` makes every captured diff empty, so every
+  exploit reports as "RESISTED".
+
+  Documented rather than patched: the measured regression rate on this repository's
+  security-hardening edits ran at roughly one in two across two review rounds, so an unverified late
+  fix is worth less than a disclosed defect. The right repair is the semantic cost measure named in
+  the main failure mode, not five more regexes.
+
