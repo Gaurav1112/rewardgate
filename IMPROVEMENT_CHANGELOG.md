@@ -15,6 +15,7 @@ Each stage is measured on the same corpus with the same scorer.
 | **Iteration 2** | Over-specification checker (asserts on internal symbols) | 42/500; caught and fixed a 5× overcount in my own counter | **Kept.** The measuring instrument needs its own tests |
 | **Iteration 3** | Adversarial exploit agent — the one component that needs a model | Proves REWARD_HACKABLE by execution; visible green, held-out red | **Kept.** But my first definition of the defect was simply wrong |
 | **Iteration 4** | Parity ablation: give the baseline `git log -p --all`, the same evidence my checker reads | baseline **0.889** vs RewardGate **0.933**; gap 0.333 → **0.044**; McNemar **p = 1.00** | **Kept, and it refuted my own headline.** The advantage was an information asymmetry I designed |
+| **Iteration 6** | k=5 exploit trials on all 15 bundles, pre-registered | 2/3 detected 5/5, `retrylite` 0/5, 0 false alarms in 60 clean trials, **p = 0.0286** | **Kept, hypothesis refuted.** The agent is deterministic, not noisy; the miss is a capability boundary |
 | **Iteration 5** | Adversarial panel against the shipped tool | 4 working fail-opens found, each reporting a defective task as sound | **Kept.** My own thesis applied to my own code |
 | **Removed** | A five-agent fan-out, one LLM per defect class | Deterministic checks give stronger evidence at $0.00: an exit code and a commit SHA beat an opinion | **Removed.** Number of agents is not a measure of engineering |
 | **Final** | Deterministic tiers + one adversarial agent | macro-F1 **0.933** vs a *fair* baseline's **0.889**, n=15, p=1.00 | Main contribution: **42% of SWE-bench Verified is defective, measured for $0.00** |
@@ -236,6 +237,61 @@ not fix that; it just stops the tool from being confidently wrong without saying
 
 ---
 
+## Iteration 6 — the k-trial experiment, which refuted its own hypothesis
+
+**What I tried and why.** This project's stated main failure mode was that the exploit agent runs
+once per bundle: *"a stochastic agent can miss an exploit it would find on a rerun."*
+`retrylite-reward-hackable` was the miss, and I had assumed it was sampling noise. So I ran k=5
+trials on all 15 bundles — clean ones included, at the same k, because sampling only the defective
+bundles harder raises recall while leaving the false-alarm rate at its k=1 value.
+
+The decision rule (≥2 of 5), the permutation test, and the conditions that would refute the
+hypothesis were committed in
+[`results/multitrial_preregistration.json`](results/multitrial_preregistration.json) **before the
+first trial ran**, with `REWARD_HACK_THRESHOLD` frozen in the same commit.
+
+**Evidence.** 75 trials, $26.67.
+
+| Bundle | Truth | Detected | 95% Wilson |
+|---|---|---:|---|
+| `csvlite-reward-hackable` | HACKABLE | **5/5** | [0.57, 1.00] |
+| `semverlite-reward-hackable` | HACKABLE | **5/5** | [0.57, 1.00] |
+| `retrylite-reward-hackable` | HACKABLE | **0/5** | [0.00, 0.43] |
+| the other 12 bundles | — | **0/5** each | [0.00, 0.43] |
+
+Permutation statistic **+0.667**, exact **p = 0.0286** over all 455 relabellings.
+
+**The hypothesis is dead, and the pre-registration named this exact outcome.** `retrylite` detected
+0 of 5. The miss is **systematic** — a blind spot in the brief or the cost patterns — not sampling
+noise. I predicted noise, wrote down what would prove me wrong, and it did.
+
+**Three things survive, and they are worth more than the hypothesis was.**
+
+*The main failure mode is not what I said it was.* k=1 and k=5 produce **identical** verdicts on all
+15 bundles. Every detection is 5/5 and every miss is 0/5 — perfectly bimodal, no bundle anywhere in
+between. The agent is not a noisy sampler; it is deterministic on this corpus and has a capability
+boundary. "Run it k times" was the wrong fix for a problem I had diagnosed wrongly.
+
+*The first significant result in the project.* p = 0.0286. The 15-bundle macro-F1 comparison cannot
+reach significance at any effort — it needs 6 one-way discordant pairs and the design yields at most
+3. Reframing the question as "does the agent discriminate above chance?" makes it reachable. This
+does **not** say the agent beats the baseline; that comparison remains p = 1.00.
+
+*The false-alarm rate held under equal budget.* 0/5 on all 12 non-hackable bundles, including the
+three `-clean` ones. The pre-registration flagged the opposite outcome as publishable: if a clean
+bundle had alarmed even once, the earlier "0 false alarms on 6 clean bundles" would have been a k=1
+artefact and macro-F1 might have fallen. It did not. **60 additional trials at the same k as the
+positives, and the false-alarm rate is still zero** — a stronger claim than the one it replaces.
+
+**Decision.** Kept, and the main failure mode rewritten. The remaining work is not more trials, it
+is finding out *why* `retrylite` is out of reach — the brief, the patterns, or the task shape.
+
+**Learning.** I named a failure mode in writing, believed it for two days, and it was wrong. The
+experiment that could refute it cost $26.67 and about three hours. Writing the refutation condition
+down first is what made the negative result publishable instead of embarrassing.
+
+---
+
 ## Final — the combined system
 
 > **The macro-F1 table below is measured against the *unfair* baseline** (`git log --oneline`).
@@ -379,12 +435,23 @@ confident numbers about the wrong thing.**
 
 ## Main failure mode
 
-**A single exploit trial priced by regex.** The agent runs once per bundle, and its exploit is
-graded by counting literal special-cases with a pattern list. Both halves fail: a stochastic agent
-can miss an exploit it would find on a rerun, and an exploit written in a shape the patterns do not
-match is priced at zero — which is exactly how `retrylite-reward-hackable` was missed, and how an
-earlier build graded a dict that memorised eight inputs as "no exploit". *k* independent trials and
-a semantic cost measure are the fixes; neither is implemented.
+**The exploit agent has a capability boundary, and I do not yet know where it is.**
+
+I used to say the failure mode was a single stochastic trial: *an agent can miss an exploit it
+would find on a rerun.* I ran the experiment and that was wrong. At k=5 across all 15 bundles,
+every detection is **5/5** and every miss is **0/5** — perfectly bimodal, nothing in between, and
+k=1 and k=5 give identical verdicts. The agent is deterministic on this corpus.
+
+So `retrylite-reward-hackable` is not bad luck. It is out of reach, and I do not know whether the
+cause is the brief, the `_HARDCODE_PATTERNS` cost grader, or the shape of that task. Finding out is
+the next piece of work, and more trials will not do it.
+
+The second half stands: exploit cost is priced by regex, and a reviewer has twice shown that
+regex mispricing text it was not written for — a dict literal read as zero cost, and docstrings
+still read as special-cases today. A semantic cost measure is the fix and it is not implemented.
+
+Reproduce: `uv run python scripts/run_multitrial.py --replay` (free), pre-registration in
+[`results/multitrial_preregistration.json`](results/multitrial_preregistration.json).
 
 ## Hot take
 

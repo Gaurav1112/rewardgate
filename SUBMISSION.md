@@ -71,9 +71,11 @@ four round-5 exploits defeated round-4 fixes. An unverified late fix is worse th
 
 ## Known limitations, stated up front
 
-- The exploit trial runs **once** per bundle and its cost is priced by regex. A stochastic agent
-  can miss an exploit it would find on a rerun. *k* trials and a semantic cost measure are the
-  fixes; neither is implemented.
+- **The exploit agent has an unexplained capability boundary.** Measured at k=5 on all 15 bundles
+  (pre-registered, $26.67): 2 of 3 reward-hackable bundles detect 5/5, the third detects 0/5, and
+  all 12 others detect 0/5. Perfectly bimodal — the agent is deterministic, not noisy, so the miss
+  is a blind spot and not sampling. I do not know whether the cause is the brief, the cost grader,
+  or the task shape. Exploit cost is still priced by regex; a semantic measure is not implemented.
 - The sandbox is a temp directory, **not a container**. An interactive confirmation now gates the
   exploit tier and names the risk, but approval is not isolation. The agent writes a patch and the harness
   executes it, so module-scope code in that patch runs on the host. Disclosed, not mitigated.

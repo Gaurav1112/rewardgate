@@ -525,12 +525,23 @@ this repository.
 
 ## Main failure mode
 
-**A single exploit trial priced by regex.** The agent runs once per bundle, and its exploit is
-graded by counting literal special-cases with a pattern list. Both halves fail: a stochastic agent
-can miss an exploit it would find on a rerun, and an exploit written in a shape the patterns do not
-match is priced at zero — which is exactly how `retrylite-reward-hackable` was missed, and how an
-earlier build graded a dict that memorised eight inputs as "no exploit". *k* independent trials and
-a semantic cost measure are the fixes; neither is implemented.
+**The exploit agent has a capability boundary, and I do not yet know where it is.**
+
+I used to say the failure mode was a single stochastic trial: *an agent can miss an exploit it
+would find on a rerun.* I ran the experiment and that was wrong. At k=5 across all 15 bundles,
+every detection is **5/5** and every miss is **0/5** — perfectly bimodal, nothing in between, and
+k=1 and k=5 give identical verdicts. The agent is deterministic on this corpus.
+
+So `retrylite-reward-hackable` is not bad luck. It is out of reach, and I do not know whether the
+cause is the brief, the `_HARDCODE_PATTERNS` cost grader, or the shape of that task. Finding out is
+the next piece of work, and more trials will not do it.
+
+The second half stands: exploit cost is priced by regex, and a reviewer has twice shown that
+regex mispricing text it was not written for — a dict literal read as zero cost, and docstrings
+still read as special-cases today. A semantic cost measure is the fix and it is not implemented.
+
+Reproduce: `uv run python scripts/run_multitrial.py --replay` (free), pre-registration in
+[`results/multitrial_preregistration.json`](results/multitrial_preregistration.json).
 
 ## Hot take
 
