@@ -91,6 +91,7 @@ def test_the_missing_image_message_tells_the_reader_how_to_build_it():
     assert "build -t rewardgate-nonexistent:0 docker/" in reason
 
 
+@needs_corpus
 def test_docker_requested_but_unavailable_fails_instead_of_falling_back(monkeypatch, capsys):
     """A `--docker` run that quietly degrades to host execution is worse than no flag at all: the
     reviewer asked for containment, did not get it, and nothing in the report says so."""

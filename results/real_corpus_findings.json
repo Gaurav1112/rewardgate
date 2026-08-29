@@ -1,4 +1,5 @@
 {
+  "corpus": "SWE-bench Verified",
   "instances": 500,
   "solution_leakage": 133,
   "published_leakage_reference": 135,
