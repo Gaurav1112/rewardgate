@@ -43,7 +43,7 @@ Verified against the working tree; every path below exists.
 | 2 | Which data is required | A1, SHA-256-pinned fetch that refuses on mismatch | ✅ |
 | 2 | What output to expect | verbatim expected blocks at each step | ✅ |
 | 2 | Versions, runtime, cost | prerequisites table; measured cost table (`$0.1174` / `$0.2551` / bundle) | ✅ |
-| 3 | Video ≤ 5 minutes | 4:46, 1920×1080 | ✅ |
+| 3 | Video ≤ 5 minutes | 4:47, 1920×1080 | ✅ |
 | 3 | Problem and simple baseline first | 0:00–1:28 | ✅ |
 | 3 | One realistic execution start to finish | 1:28–2:34, reward gate → exploit patch → adjudication | ✅ |
 | 3 | Final comparison | 2:34–3:22, the parity ablation | ✅ |
