@@ -26,7 +26,7 @@ import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from rewardgate.diffutil import added_lines, files_in_patch
+from rewardgate.diffutil import added_lines_by_file
 
 _MIN_SIGNIFICANT_LENGTH = 12
 _COMMENT = re.compile(r"^\s*(#|//|\*)")
@@ -36,41 +36,42 @@ def _normalise(line: str) -> str:
     return re.sub(r"\s+", " ", line).strip()
 
 
-def _shipped_lines(bundle_dir: Path, only_paths: set[str]) -> set[str]:
-    """Lines already visible in the shipped source of the files the gold patch actually modifies.
+def _shipped_lines(bundle_dir: Path, rel: str) -> set[str]:
+    """Lines already visible in one shipped source file, comment-filtered.
 
-    Scoped, and comment-filtered. An earlier version unioned every line of every `.py` under the
-    bundle, including docstrings — so an adversarial review defeated the checker by planting one
-    innocuous file whose docstring contained the fix. That deleted the line from the fingerprint
-    and produced the affirmative verdict "git history present and contains no gold-patch lines"
-    on a bundle whose fix was still sitting in history.
+    Scoped to a single path on purpose. Two earlier versions were defeated by widening this:
+    unioning every `.py` under the bundle let a planted docstring erase the fingerprint, and
+    scoping it to *the set of files the patch touches* left the same hole open, because the bundle
+    author writes the patch and can therefore name a decoy file into that set.
 
-    Subtraction exists to drop lines a gold patch merely restates. It must not be reachable from
-    a file the patch never touches.
+    Subtraction exists to drop lines a gold patch merely restates. A restated line is by definition
+    already in the file being patched, so nothing outside that file should ever cancel it.
     """
-    lines: set[str] = set()
-    for rel in sorted(only_paths):
-        path = bundle_dir / rel
-        if not path.is_file():
-            continue
-        try:
-            text = path.read_text()
-        except (OSError, UnicodeDecodeError):
-            continue
-        for raw in text.splitlines():
-            if _COMMENT.match(raw):
-                continue
-            lines.add(_normalise(raw))
-    return lines
+    path = bundle_dir / rel
+    if not path.is_file():
+        return set()
+    try:
+        text = path.read_text()
+    except (OSError, UnicodeDecodeError):
+        return set()
+    return {_normalise(raw) for raw in text.splitlines() if not _COMMENT.match(raw)}
 
 
-def _significant_solution_lines(patch: str) -> set[str]:
-    """Lines the gold patch adds that are distinctive enough to identify it."""
-    return {
-        norm
-        for raw in added_lines(patch)
-        if not _COMMENT.match(raw) and len(norm := _normalise(raw)) >= _MIN_SIGNIFICANT_LENGTH
-    }
+def _significant_solution_lines(patch: str) -> dict[str, set[str]]:
+    """Distinctive lines the gold patch adds, keyed by the file each hunk writes to.
+
+    Keyed rather than pooled so the subtraction below can be per-file. See `_shipped_lines`.
+    """
+    by_file: dict[str, set[str]] = {}
+    for rel, lines in added_lines_by_file(patch).items():
+        significant = {
+            norm
+            for raw in lines
+            if not _COMMENT.match(raw) and len(norm := _normalise(raw)) >= _MIN_SIGNIFICANT_LENGTH
+        }
+        if significant:
+            by_file[rel] = significant
+    return by_file
 
 
 @dataclass(frozen=True)
@@ -147,8 +148,8 @@ def detect_git_contamination(bundle_dir: Path, solution_patch: str) -> Contamina
     if not (bundle_dir / ".git").exists():
         return ContaminationFinding(has_git=False)
 
-    solution_lines = _significant_solution_lines(solution_patch)
-    if not solution_lines:
+    by_file = _significant_solution_lines(solution_patch)
+    if not by_file:
         # No fingerprint, so history cannot be searched — which is not the same as searching it
         # and finding nothing. This is reachable for real fixes: a deletion-only patch (removing a
         # stray `break`) adds no lines at all, and a missing `solution.patch` arrives here as the
@@ -170,7 +171,12 @@ def detect_git_contamination(bundle_dir: Path, solution_patch: str) -> Contamina
     # a hunk regenerated with less context — and history containing those lines only proves the
     # baseline was committed. An adversarial review turned a *clean* bundle into a REJECT this way,
     # citing the innocent `initial import` commit as the contaminating one.
-    solution_lines -= _shipped_lines(bundle_dir, files_in_patch(solution_patch))
+    # Per file: a line survives only if it is absent from the very file its hunk writes to.
+    solution_lines = {
+        line
+        for rel, lines in by_file.items()
+        for line in lines - _shipped_lines(bundle_dir, rel)
+    }
     if not solution_lines:
         return ContaminationFinding(
             has_git=True,

@@ -44,6 +44,35 @@ def files_in_patch(patch: str | None) -> set[str]:
     return {f.strip() for f in found if f.strip()} or set(_DIFF_HEADER.findall(text))
 
 
+def added_lines_by_file(patch: str | None) -> dict[str, list[str]]:
+    r"""Added lines, attributed to the file whose hunk added them.
+
+    `added_lines` flattens a patch into one anonymous pool, which is fine for asking *what* a patch
+    introduces and wrong for asking *where*. Contamination scoping needs the second question: a
+    line only counts as "the gold patch merely restating existing source" if it already exists in
+    **the file that hunk writes to**. Pooling the two lets any file named in the patch cancel
+    fingerprint lines belonging to any other, which is a bundle-author-controlled fail-open.
+
+    A `+++` marker is only honoured when the previous line was `---`. Unified diffs always emit the
+    pair together, and without that guard an added line whose own content begins with `++` is read
+    as a file header, silently reassigning every following line to a path built out of source code.
+    """
+    out: dict[str, list[str]] = {}
+    current, previous = "", ""
+    for line in (patch or "").splitlines():
+        if line.startswith("diff --git"):
+            current = ""
+        elif previous.startswith("---") and (m := _PLUS_MARKER.match(line)):
+            path = m.group(1)
+            if path.startswith('"'):
+                path = path[1:-1].encode().decode("unicode_escape")
+            current = "" if path.strip() == "/dev/null" else path.strip()
+        elif line.startswith("+") and current:
+            out.setdefault(current, []).append(line[1:])
+        previous = line
+    return out
+
+
 def added_lines(patch: str | None) -> list[str]:
     """Return the content of every added line, with the leading `+` stripped.
 

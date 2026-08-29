@@ -131,7 +131,12 @@ def verification_commands(bundle_dir: Path, trace: AuditTrace) -> list[str]:
     # Search for a line the fix actually adds. Prefer one the checker proved is disclosed, so the
     # reader reproduces the finding rather than a paraphrase of it.
     disclosed = sorted(getattr(contamination, "disclosed_lines", ()) or ())
-    candidates = disclosed or sorted(_significant_solution_lines(read_patch(bundle_dir)))
+    # `_significant_solution_lines` is keyed by file, so it must be flattened to *lines* here.
+    # Iterating the mapping directly yields paths, and `sorted()` accepts both without complaint:
+    # the emitted grep silently became a search for `src/csvlite/__init__.py`, which matches the
+    # diff header of every commit touching that file and fired on the negative control.
+    by_file = _significant_solution_lines(read_patch(bundle_dir))
+    candidates = disclosed or sorted(set().union(*by_file.values()) if by_file else ())
     if not candidates:
         commands.append("# no gold-patch line is distinctive enough to search history for")
         return commands
