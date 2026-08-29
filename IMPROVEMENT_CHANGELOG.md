@@ -280,6 +280,13 @@ right; the summary table alone would have left me with the wrong story.
 between. The agent is not a noisy sampler; it is deterministic on this corpus and has a capability
 boundary. "Run it k times" was the wrong fix for a problem I had diagnosed wrongly.
 
+> **Superseded — see *Withdrawn — "5 of 5"* below.** The paragraph above is left unedited because
+> the sequence is the point: this is what I believed after the k=5 run. Two of its three sentences
+> are wrong. Verdicts *are* bimodal, which is what I measured. Exploit **generation** is not — 9 of
+> the 15 bundles are mixed, and this bundle is 4/5, not 5/5. I had measured the cost grader's
+> output and attributed its stability to the agent. "Capability boundary" is also wrong: it is
+> detector expressiveness.
+
 *The first significant result in the project.* p = 0.0286. The 15-bundle macro-F1 comparison cannot
 reach significance at any effort — it needs 6 one-way discordant pairs and the design yields at most
 3. Reframing the question as "does the agent discriminate above chance?" makes it reachable. This

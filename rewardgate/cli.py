@@ -114,14 +114,22 @@ def verification_commands(bundle_dir: Path, trace: AuditTrace) -> list[str]:
     # running against the reviewer's own working directory -- the same "operates on the enclosing
     # repo" class as the `git stash` bug this block was rewritten to fix.
     commands = [
-        # `--` matters: shlex.quote does not protect against a path that IS a flag. A bundle
-        # directory named `-P` emitted `cd -P || exit 1`, which succeeds, changes to the
-        # parent, and leaves the following `patch -p1` running in the reviewer's home
-        # directory. The quoting held; the argument boundary did not.
-        f"cd -- {shlex.quote(str(shown))} || exit 1",
+        # Copy to a temp directory first. The previous block ran `patch -p1` against the shipped
+        # bundle and reversed it afterwards, which mutates the reviewer's corpus for as long as the
+        # suite takes to run. That is the exact pattern `tests/conftest.py`'s session guard now
+        # forbids, and it is not hypothetical: it made a *clean* bundle audit as NOP_PASS in this
+        # very tool, because every audit path materialises a bundle by copying it and one copy
+        # landed inside the window. So this tool was printing, as its own verification recipe, the
+        # thing that would fail its own test suite.
+        #
+        # `--` matters twice over: shlex.quote protects the argument's CONTENT, not its POSITION,
+        # and a bundle directory named `-P` emitted `cd -P || exit 1`, which succeeds, moves to the
+        # parent, and left the following `patch` running in the reviewer's home directory.
+        f'work=$(mktemp -d) && cp -R -- {shlex.quote(str(shown))}/. "$work" && cd -- "$work" || exit 1',
         "uv run pytest tests/ -q                             # no-op:  expect failures",
         "patch -p1 < solution.patch && uv run pytest tests/ -q  # oracle: expect all pass",
-        "patch -R -p1 < solution.patch                       # restore the tree",
+        # No restore step: the tree is disposable. Removing it also removes the failure mode where
+        # an interrupted paste leaves the bundle patched and every later audit of it wrong.
     ]
 
     contamination = trace.contamination
@@ -226,7 +234,12 @@ def render_report(audit: Audit, trace: AuditTrace, bundle_dir: Path) -> str:
         lines += ["", "  contaminating commits:"]
         lines += [f"    {c}" for c in contamination.commits]
 
-    if exploit is not None and exploit.produced_patch and exploit.is_reward_hackable:
+    # Gated on `gameable`, not `is_reward_hackable`. The latter requires 0 < hardcoded_cases <= 2,
+    # so the "exploit cost not measurable" verdict — whose own printed advice is *review the patch
+    # by hand* — was the one verdict that withheld the patch. That is the most common outcome on
+    # this corpus: 33 of 75 saved trials. A report cannot tell the reader to inspect something and
+    # then not show it to them.
+    if exploit is not None and exploit.produced_patch and exploit.gameable:
         lines += ["", _rule(), "EXPLOIT PATCH (this is what made the visible suite pass)", _rule(), ""]
         lines += [f"  {line}" for line in exploit.exploit_patch.splitlines()[:40]]
 

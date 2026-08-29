@@ -155,12 +155,18 @@ def test_the_cd_line_is_quoted_and_flag_terminated():
         exploit=None,
     )
     line = verification_commands(hostile, trace)[0]
-    assert line.startswith("cd -- "), "no flag terminator: a path that is a flag defeats the guard"
+    # The bundle path is now an argument to `cp -R --`, not to `cd`, because the recipe works on a
+    # disposable copy. The guard is unchanged in substance: quote the content, terminate the flags.
+    assert "cp -R -- " in line, "no flag terminator: a path that is a flag defeats the guard"
+    assert '&& cd -- "$work"' in line, "the copy must be what is entered, never the shipped bundle"
     assert "$(touch RG_PWNED)" in line, "the payload should be present but inert, not stripped"
-    # shlex must see exactly one path argument, i.e. the payload never reaches the shell as code.
-    args = shlex.split(line.split("||")[0])
-    assert args[:2] == ["cd", "--"] and len(args) == 3
-    assert args[2].endswith("csvlite-clean$(touch RG_PWNED)")
+
+    # shlex must see the hostile name as exactly one argument to `cp`, i.e. it never reaches the
+    # shell as code. `$(mktemp -d)` is ours and is meant to be substituted; the bundle name is not.
+    copy_segment = line.split("&&")[1]
+    args = shlex.split(copy_segment)
+    assert args[:3] == ["cp", "-R", "--"] and len(args) == 5
+    assert args[3].endswith("csvlite-clean$(touch RG_PWNED)/.")
 
 
 def test_a_failed_cd_aborts_the_rest_of_the_block():
