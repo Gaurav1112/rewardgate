@@ -55,6 +55,24 @@ def test_leakage_rate_matches_published_measurement(bundles):
     assert leaked == 133
 
 
+def test_the_traceback_only_share_of_leakage_is_pinned(bundles):
+    """The checker's weakest case, held to a number so it cannot quietly grow.
+
+    In these the gold file appears only inside a pasted stack trace, which is a reporting
+    convention rather than an authoring error. It is 28% of all leakage flags, so it is disclosed
+    beside the headline rather than folded into it. If a change to the matcher moves this, the
+    README's strict figures move with it and both must be updated together.
+    """
+    from rewardgate.checkers.leakage import named_only_in_traceback
+
+    findings = [(b, detect_solution_leakage(b.problem_statement, b.patch)) for b in bundles]
+    only_tb = sum(named_only_in_traceback(b.problem_statement, f) for b, f in findings)
+    assert only_tb == 37, f"traceback-only leakage changed: {only_tb} (expected 37)"
+
+    strict = sum(1 for b, f in findings if f.leaked and not named_only_in_traceback(b.problem_statement, f))
+    assert strict == 96, f"strict leakage changed: {strict} (expected 96)"
+
+
 def test_over_specification_counts_only_internal_symbols(bundles):
     """Counting public API mentions inflated this 5x (229 vs 42). Hold the corrected figure."""
     findings = [detect_over_specification(b.problem_statement, b.patch) for b in bundles]
@@ -80,6 +98,27 @@ def test_headline_defect_rate_is_stable(bundles):
         ):
             flagged += 1
     assert flagged == 210, f"headline defect count changed: {flagged}/500 (expected 210)"
+
+
+def test_the_conservative_headline_is_pinned_too(bundles):
+    """42.0% is the checker's literal reading; 37.8% excludes traceback-only leakage.
+
+    The README publishes both and calls 37.8% the conservative figure, so both are held. Pinning
+    only the flattering one would let the caveat rot into decoration.
+    """
+    from rewardgate.checkers.leakage import named_only_in_traceback
+
+    strict = 0
+    for b in bundles:
+        leak = detect_solution_leakage(b.problem_statement, b.patch)
+        if (
+            (leak.leaked and not named_only_in_traceback(b.problem_statement, leak))
+            or detect_over_specification(b.problem_statement, b.patch).over_specified
+            or detect_hint_contamination(b.hints_text, b.patch).contaminated
+            or analyze_test_assertions(b.test_patch).has_weak_assertions
+        ):
+            strict += 1
+    assert strict == 189, f"strict defect count changed: {strict}/500 (expected 189)"
 
 
 def test_leakage_flags_the_same_instance_SET_not_merely_the_same_count(bundles):

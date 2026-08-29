@@ -73,9 +73,21 @@ on this machine**, so in a terminal it first requires you to type `yes`; `--yes`
 uv run pytest -q
 ```
 
-Expected: `290 passed, 4 skipped`, in roughly 10–16 seconds. The 4 skips are the container tests;
-they run only after `docker build -t rewardgate-sandbox:1 docker/` (step A8), which makes it
-`294 passed`. Nothing else in the suite is gated.
+Expected: **294 tests collected, 0 failed**, in roughly 10–20 seconds.
+
+How many of the 294 *run* depends on optional prerequisites, so the pass count is not a single
+number and this guide will not pretend it is. All three of these were observed:
+
+| State | Result |
+|---|---|
+| Clean clone, nothing else fetched | `287 passed, 7 skipped` |
+| After A4b fetches the held-out corpus | `290 passed, 4 skipped` |
+| After A8 builds `rewardgate-sandbox:1` | `294 passed` |
+
+Run `uv run pytest -q -rs` to see which are skipped and why; every skip names the command that
+enables it. **No configuration produces a failure** — that is the claim to hold this to. An earlier
+version of this file asserted a flat `294 passed`, which is only reachable with a container image
+the guide had not told you to build.
 
 What a green suite does and does not verify. It pins **every third-party-corpus number** — the
 133/500 leakage figure, the 42.0% at-least-one-defect rate, and the specific instance *ids*, not

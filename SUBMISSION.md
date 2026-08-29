@@ -95,6 +95,20 @@ is given.
   agent-written code on the host; the approval banner says so in those words. Both approval gates
   weaken to a printed warning when stdin is not a terminal, so an unattended run has no approval
   step. See [docs/SANDBOXING.md](docs/SANDBOXING.md).
+- **28% of the leakage flags come from a stack trace.** In 37/500 the gold file appears *only*
+  inside a pasted traceback — a reporting convention, not an authoring error. Both readings are
+  published rather than one: leakage 133/500 (26.6%) or **96/500 (19.2%)** strict, and the headline
+  42.0% or **37.8%** strict. `uv run python -m rewardgate.report_real` prints both, and both are
+  pinned in `tests/test_corpus_rates.py`. Take 37.8% as the conservative number.
+- **No capability-matched baseline was run, and "0 executed artifacts" is true by construction.**
+  `baseline.py` runs with all tools disallowed — that is the challenge's own suggested baseline —
+  and the parity arm fixes only the *information* asymmetry. A tool-enabled baseline was not built
+  because `corpus/synthetic/bundles/labels.yaml` is the answer key `evaluate.load_truth()` scores
+  against, one directory above every bundle: granting `Bash`/`Read` yields 15/15 by reading it, and
+  withholding it reintroduces the asymmetry the parity ablation exists to remove.
+- **The permutation p = 0.0286 treats clustered units as independent.** The 15 bundles are 5
+  variants of 3 base repositories, so the effective n is nearer 3 than 15 and the p-value is
+  optimistic by an amount this design cannot estimate.
 - Representative trajectories exist for the three agents that ship inside the product. The
   development-time agents are documented as reconstructions, and labelled as such.
 - **One implementation defect, confirmed with an executed reproduction and left unfixed.** Exploit

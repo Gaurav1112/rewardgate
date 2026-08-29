@@ -202,9 +202,25 @@ On the third-party corpus — 500 real instances, deterministic checks, **$0.00*
 | Weak fail-to-pass assertions | 48/350 (13.7%) of parsed |
 | **At least one defect** | **210/500 (42.0%)** |
 
-**Stated limitation:** 150/500 instances are *indeterminate* for assertion analysis — the diff adds
-no test function, or is a mid-file hunk that does not parse. They are excluded from the rate, never
-counted as clean.
+**Two stated limitations, both printed by the tool itself.**
+
+150/500 instances are *indeterminate* for assertion analysis — the diff adds no test function, or
+is a mid-file hunk that does not parse. They are excluded from the rate, never counted as clean.
+
+And the leakage checker's weakest case, separated rather than defended: in **37/500 (7.4%)** the
+gold file appears **only inside a pasted stack trace**. That is 28% of all leakage flags. A
+reporter pasting what their console printed did not point at the fix, so calling it authored
+leakage conflates a reporting convention with an authoring error. It is not simply a false positive
+either — an agent reading that traceback *does* learn which file to open, and localisation is the
+skill the task claims to measure. Both readings are defensible, so both numbers are printed:
+
+| | as reported | traceback-only excluded |
+|---|---:|---:|
+| Solution leakage | 133/500 (26.6%) | **96/500 (19.2%)** |
+| At least one defect | 210/500 (42.0%) | **189/500 (37.8%)** |
+
+The headline moves by 4.2 points under the stricter reading. Take **37.8%** as the conservative
+figure and 42.0% as the checker's literal one.
 
 And the demonstration, on a task whose reward gate holds perfectly:
 
@@ -411,6 +427,12 @@ here, not noisy. Exact permutation test over all 455 relabellings: statistic **+
 **p = 0.0286**. And zero false alarms in **60 clean trials** at the same k as the positives, the
 stronger version of the earlier 0-in-6 figure. This says the agent discriminates reward-hackable
 tasks above chance. It does **not** say it beats the baseline, which remains p = 1.00.
+
+**And the permutation test's own weak point.** The 15 bundles are 5 variants of each of 3 base
+repositories, so they are clustered, not independent — the test treats 15 exchangeable units where
+there are closer to 3. The p-value is therefore optimistic by an amount this design cannot
+estimate. Reading it as "above chance on this corpus" is supported; reading it as a population
+claim about benchmark tasks is not.
 
 Reproduce: `uv run python scripts/run_multitrial.py --replay`, then read any file in
 `results/multitrial/retrylite-reward-hackable/`.

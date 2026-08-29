@@ -43,6 +43,21 @@ them, n=3 per class. The over-specification, hint and weak-assertion rates have 
 at all. Treat the 42.0% defect rate as "what these four checkers find", not as ground truth about
 SWE-bench.
 
+**The baseline has no execution, and the "executed artifact" row below is therefore true by
+construction.** `baseline.py` is invoked with all tools disallowed — that is what the challenge's
+own suggested baseline is ("one direct prompt with basic instructions"), and the parity arm fixes
+the *information* asymmetry by feeding it `git log -p --all`. But it cannot run anything, so
+"0 backed by an executed artifact" is a restatement of the setup rather than a discovered result,
+and it is listed that way rather than as a finding.
+
+A capability-matched baseline — same prompt, plus `Bash` and `Read` — was not run, and the reason
+is not effort. `corpus/synthetic/bundles/labels.yaml` is the same manifest `evaluate.load_truth()`
+scores against, one directory above every bundle, and each bundle ships its own `task.yaml`. A
+tool-enabled baseline scores 15/15 by reading the answer key. Withholding those files (as
+`exploit.WITHHELD_FROM_SANDBOX` does for the exploit agent) reintroduces exactly the asymmetry the
+parity ablation exists to remove. Building a corpus where that comparison is fair is a real piece
+of work and it is not done here.
+
 **What does make the synthetic comparison meaningful** is the negative controls: three
 `clean-git-history` bundles carrying real multi-commit histories that do *not* contain the fix.
 Without them, "does `.git` exist?" would score a perfect contamination F1. With them, the

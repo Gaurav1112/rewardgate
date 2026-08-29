@@ -18,10 +18,10 @@ Verified against the working tree; every path below exists.
 |---|---|---|
 | Repository obtainable | `github.com/Gaurav1112/rewardgate`, public | **PASS** |
 | Archive | built on demand with `git archive --format=zip --prefix=rewardgate/ HEAD -o rewardgate-submission.zip`; last build verified to run standalone (`uv sync && pytest` inside the extracted copy) | **PASS (built at submission time, not committed)** |
-| Tests | `uv run pytest -q` → **290 passed, 4 skipped**, ~14s, no API key. 294 passed once `docker build -t rewardgate-sandbox:1 docker/` has run (A8); the 4 skips are the container tests | **PASS** |
+| Tests | `uv run pytest -q` → **294 collected, 0 failed**, ~14s, no API key. Pass count depends on optional prerequisites: `287 passed, 7 skipped` on a clean clone, `290/4` with the held-out corpus, `294 passed` after the sandbox image is built. Every skip names the command that enables it | **PASS** |
 | README | [README.md](README.md) — user, bottleneck, why it matters | **PASS** |
 | Agent-use evidence | [AGENT_TRAJECTORIES.md](AGENT_TRAJECTORIES.md), [`trajectories/`](trajectories/) | **PASS** |
-| Demo video | [`rewardgate-demo.mp4`](rewardgate-demo.mp4), 4:47, tracked in-repo | **PASS** |
+| Demo video | [`rewardgate-demo.mp4`](rewardgate-demo.mp4), 4:46, tracked in-repo | **PASS** |
 | Reproducibility | [REPRODUCTION.md](REPRODUCTION.md); clean-clone run reproduces byte-identical results | **PASS** |
 
 ---
@@ -43,7 +43,7 @@ Verified against the working tree; every path below exists.
 | 2 | Which data is required | A1, SHA-256-pinned fetch that refuses on mismatch | ✅ |
 | 2 | What output to expect | verbatim expected blocks at each step | ✅ |
 | 2 | Versions, runtime, cost | prerequisites table; measured cost table (`$0.1174` / `$0.2551` / bundle) | ✅ |
-| 3 | Video ≤ 5 minutes | 4:47, 1920×1080 | ✅ |
+| 3 | Video ≤ 5 minutes | 4:46 (286.2s, ffprobe), 1920×1080 | ✅ |
 | 3 | Problem and simple baseline first | 0:00–1:28 | ✅ |
 | 3 | One realistic execution start to finish | 1:28–2:34, reward gate → exploit patch → adjudication | ✅ |
 | 3 | Final comparison | 2:34–3:22, the parity ablation | ✅ |
@@ -115,10 +115,12 @@ invocation sites, `files_in_patch` reading `+++ b/...`, per-file contamination s
 | 210/500 (42.0%) carry a defect | `uv run python -m rewardgate.report_real` |
 | Replicates at 43.5% on a zero-overlap held-out corpus | `./scripts/fetch_holdout_corpus.sh && uv run python -m rewardgate.report_real --holdout` |
 | 133/500 leakage; cf. published 135 | same command — **different heuristics, corroboration not replication** |
+| 37/500 leakage flags come only from a stack trace; strict headline 189/500 (37.8%) | `uv run python -m rewardgate.report_real` — both figures printed |
+| Human time per task: manual floor 0.17s vs RewardGate 0.26s (the tool is *slower*) | `uv run python scripts/measure_human_time.py` |
 | macro-F1 0.600 baseline / 0.933 RewardGate | `uv run python -m rewardgate.evaluate --replay` |
 | Parity: 0.889 vs 0.933, gap 0.044, p = 1.00 | `uv run python scripts/run_parity_ablation.py --replay` |
 | McNemar p = 0.2500, 3 discordant | `uv run python -m rewardgate.significance` |
-| Every third-party corpus number is pinned | `uv run pytest -q` → 290 passed, 4 skipped (294 with the sandbox image) |
+| Every third-party corpus number is pinned | `uv run pytest -q` → 294 collected, 0 failed |
 | Cost $0.1174 / $0.2551 per bundle | `results/summary.json` |
 | CLI overhead $0.1967 before any work | `results/cli_overhead_probe.json` |
 | `--docker` blocks the network and the host filesystem | `docker build -t rewardgate-sandbox:1 docker/ && uv run python scripts/prove_containment.py` |
