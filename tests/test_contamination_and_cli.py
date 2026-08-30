@@ -7,6 +7,7 @@ earlier implementation modelled it wrongly — the fix commit was left plainly v
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -229,3 +230,51 @@ def test_scripted_use_is_never_blocked_by_either_gate(monkeypatch):
     monkeypatch.setattr("sys.stdin.isatty", lambda: False)
     monkeypatch.setattr("builtins.input", lambda _: pytest.fail("prompted a non-terminal caller"))
     assert record_review(REJECT, assume_yes=False) == ("", EXIT_DEFECT)
+
+
+# --- the report as an artifact, not just a thing on stdout -------------------------------
+
+def test_the_report_can_be_written_to_a_file_the_author_attaches(tmp_path, capsys):
+    """Until this existed the audit was a thing you watched, not a thing you kept.
+
+    The reader is a contractor paid per *accepted* task. They need something to attach to a
+    submission, hand a reviewer, or diff against last week — and the memo only ever went to stdout.
+    """
+    memo = tmp_path / "audit.md"
+    main(["audit", "csvlite-nop-pass", "--no-exploit", "--out", str(memo)])
+    assert memo.exists()
+    text = memo.read_text()
+    assert "VERDICT: REJECT" in text and "EXECUTED EVIDENCE" in text
+    assert "WHAT TO FIX BEFORE YOU SUBMIT" in text
+    assert str(memo) in capsys.readouterr().out, "the run should say where it wrote the file"
+
+
+def test_the_json_verdict_says_how_many_classes_were_actually_checked(tmp_path):
+    """The fail-open this project exists to catch, committed by anyone integrating it.
+
+    A CI job reading only `verdict` cannot tell "no defect found" from "two of three classes were
+    never examined". Both fields are mandatory in the payload for that reason, and `--no-exploit`
+    must report 2, never 3.
+    """
+    out = tmp_path / "verdict.json"
+    main(["audit", "csvlite-clean", "--no-exploit", "--json", str(out)])
+    payload = json.loads(out.read_text())
+
+    assert payload["checked_classes"] == 2 and payload["total_classes"] == 3
+    assert payload["verdict"] == "INDETERMINATE", "2 of 3 classes must never read as ACCEPT"
+    assert payload["exit_code"] == EXIT_INDETERMINATE
+    assert set(payload["defects"]) == {"NOP_PASS", "CONTAMINATION_GIT", "REWARD_HACKABLE"}
+    assert payload["verify_yourself"], "the machine-readable form must carry the checks too"
+
+
+def test_every_proven_defect_carries_a_remedy(tmp_path):
+    """A finding without a next step is a complaint. Every class must have one, and the report
+    must print it — a contractor holding a rejection needs to know what to change."""
+    from rewardgate.schema import DEFECT_DESCRIPTIONS, DEFECT_REMEDIES
+
+    assert set(DEFECT_REMEDIES) == set(DEFECT_DESCRIPTIONS)
+    out = tmp_path / "v.json"
+    main(["audit", "csvlite-contaminated-git", "--no-exploit", "--json", str(out)])
+    payload = json.loads(out.read_text())
+    proven = [n for n, v in payload["defects"].items() if v]
+    assert proven and set(payload["remedies"]) == set(proven)

@@ -67,6 +67,16 @@ it prints the banner and exits 1. Pass `--yes` to skip the prompt.
 `--no-exploit` skips the paid agent tier; drop it to run the full pipeline on one bundle (~$0.26). **That tier executes agent-written code
 on this machine**, so in a terminal it first requires you to type `yes`; `--yes` skips the gate.
 
+To keep the result rather than just read it:
+
+```bash
+uv run rewardgate audit csvlite-contaminated-git --no-exploit --out audit.md --json verdict.json
+```
+
+`audit.md` is the memo an author attaches to a submission; `verdict.json` is the same verdict as
+data, carrying `checked_classes` / `total_classes` so a CI job cannot mistake a partial audit for
+a clean one. Both list the concrete repair for every proven defect.
+
 ### A3. Run the test suite
 
 ```bash

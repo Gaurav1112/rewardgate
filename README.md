@@ -100,6 +100,7 @@ Both see the same bundles, emit the same schema, and are scored by the same func
 | **Capability** | It can *settle* `REWARD_HACKABLE`. The baseline can only form an opinion about it; the pipeline writes an exploit patch, runs it, and shows the visible suite green while the held-out suite is red. Under the fair (parity) comparison this is also the only class where the two differ: F1 **0.800** vs **0.667**. |
 | **Reliability** | Every positive verdict carries a mechanical artifact — an exit code, a commit SHA, an exploit patch. Nothing rests on a model's assertion, which matters given a measured **18.5% evaluator–human misalignment rate** in LLM-as-judge ([arXiv:2607.02577](https://arxiv.org/abs/2607.02577)). |
 | **Coverage** | Two of three classes are settled **deterministically at $0.00**, so they can run in CI on every task, not just on a sample. |
+| **Usable output** | The verdict is an artifact, not a scrollback: `--out` writes the memo an author attaches to a submission, `--json` the machine form for CI, and every proven defect carries the specific repair. |
 | **Safety** | `--docker` runs every test execution in a network-less, non-root container — [measured both ways](docs/SANDBOXING.md#measured-not-asserted), not asserted. |
 | **Engineering** | A check that cannot run returns `INDETERMINATE`, never `ACCEPT` — including on `--no-exploit`, where only two of three classes are examined. A full test suite, exit codes that distinguish "broken" from "uncheckable", and a documented bundle contract. |
 
@@ -380,10 +381,18 @@ To audit a task of your own, the required layout is in
 [docs/BUNDLE_FORMAT.md](docs/BUNDLE_FORMAT.md):
 
 ```bash
-uv run rewardgate audit path/to/my-task --no-exploit
+uv run rewardgate audit path/to/my-task --no-exploit --out audit.md --json verdict.json
 # exit 1 = defect proven, 3 = a check could not run. Under --no-exploit only 2 of 3
 # classes are examined, so exit 0 (ACCEPT) requires the full pipeline.
 ```
+
+`--out` writes the memo you attach to a submission; `--json` is the same verdict as data. The JSON
+carries `checked_classes` and `total_classes` alongside the verdict on purpose — a CI job reading
+only `verdict` cannot tell *no defect found* from *two of three classes were never examined*, which
+is the exact fail-open this project exists to catch, committed by whoever integrates it.
+
+Every proven defect also comes with **what to change before you submit** — the report used to state
+a verdict and stop, which leaves an author holding a rejection and no next step.
 
 ## Documents
 

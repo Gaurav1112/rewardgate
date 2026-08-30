@@ -12,14 +12,17 @@ on trust.
 from __future__ import annotations
 
 import argparse
+import json
 import shlex
 import sys
+import textwrap
 from pathlib import Path
 
 from rewardgate.auditor import AuditTrace, audit_bundle
 from rewardgate.execution import SANDBOX_IMAGE, ContainerConfig, container_available
 from rewardgate.schema import (
     ACCEPT,
+    DEFECT_REMEDIES,
     CONTAMINATION_GIT,
     DEFECT_DESCRIPTIONS,
     INDETERMINATE,
@@ -247,6 +250,17 @@ def render_report(audit: Audit, trace: AuditTrace, bundle_dir: Path) -> str:
     lines += [f"  {line}" for line in verification_commands(bundle_dir, trace)]
     lines.append("")
 
+    # The reader is an author deciding whether to submit, not an archivist. A verdict without a
+    # next step leaves them holding a rejection and nothing to act on, so every proven defect gets
+    # the specific repair — and a clean run says so rather than staying silent.
+    proven = [name for name, present in audit.defects.items() if present]
+    if proven:
+        lines += ["", _rule(), "WHAT TO FIX BEFORE YOU SUBMIT", _rule(), ""]
+        for name in proven:
+            lines.append(f"  {name}")
+            lines += [f"    {line}" for line in textwrap.wrap(DEFECT_REMEDIES[name], 74)]
+            lines.append("")
+
     if audit.verdict == REJECT:
         lines += [
             _rule("!"),
@@ -351,6 +365,36 @@ def record_review(verdict: str, assume_yes: bool) -> tuple[str, int]:
                     "defer": EXIT_INDETERMINATE}[reply])
 
 
+def audit_as_dict(audit: Audit, trace: AuditTrace, bundle_dir: Path) -> dict:
+    """The verdict as data, for a CI job or a submission pipeline.
+
+    Deliberately includes `exit_code` and `checked_classes`. A caller that reads only `verdict`
+    cannot distinguish "no defect found" from "two of three classes were never examined", and that
+    is the exact fail-open this project exists to catch — committed by anyone integrating it.
+    """
+    exploit = trace.exploit
+    return {
+        "bundle_id": audit.bundle_id,
+        "verdict": audit.verdict,
+        "exit_code": {ACCEPT: EXIT_ACCEPT, INDETERMINATE: EXIT_INDETERMINATE}.get(
+            audit.verdict, EXIT_DEFECT
+        ),
+        "checked_classes": 2 if exploit is None else 3,
+        "total_classes": 3,
+        "defects": dict(audit.defects),
+        "evidence": dict(audit.evidence),
+        "remedies": {n: DEFECT_REMEDIES[n] for n, present in audit.defects.items() if present},
+        "executed": {
+            "oracle": trace.gate.oracle.summary if trace.gate else None,
+            "nop": trace.gate.nop.summary if trace.gate else None,
+            "exploit_verdict": exploit.verdict if exploit else "not run (--no-exploit)",
+            "exploit_patch": exploit.exploit_patch if exploit and exploit.gameable else "",
+        },
+        "verify_yourself": verification_commands(bundle_dir, trace),
+        "error": audit.error or "",
+    }
+
+
 def cmd_audit(args: argparse.Namespace) -> int:
     bundle_dir = Path(args.bundle)
     if not bundle_dir.exists():
@@ -383,9 +427,21 @@ def cmd_audit(args: argparse.Namespace) -> int:
     audit, trace = audit_bundle(
         bundle_dir, run_exploit=not args.no_exploit, container=container
     )
-    print(render_report(audit, trace, bundle_dir))
+    report = render_report(audit, trace, bundle_dir)
+    print(report)
     if audit.error:
         print(f"  BLOCKED: {audit.error}\n")
+
+    # The report is the deliverable, and until now it existed only on stdout. The person this tool
+    # is written for is paid per *accepted* task: they need something to attach to a submission, or
+    # to hand a reviewer, or to diff against last week's run. Printing it and throwing it away made
+    # the audit a thing you watch rather than a thing you keep.
+    if args.out:
+        Path(args.out).write_text(report + "\n")
+        print(f"  report written to {args.out}\n")
+    if args.json:
+        Path(args.json).write_text(json.dumps(audit_as_dict(audit, trace, bundle_dir), indent=2) + "\n")
+        print(f"  machine-readable verdict written to {args.json}\n")
     if audit.verdict == ACCEPT:
         return EXIT_ACCEPT
     if audit.verdict == INDETERMINATE:
@@ -421,6 +477,14 @@ def main(argv: list[str] | None = None) -> int:
     audit_parser.add_argument(
         "--yes", action="store_true",
         help="skip the host-execution confirmation (implied when stdin is not a terminal)",
+    )
+    audit_parser.add_argument(
+        "--out", metavar="FILE",
+        help="write the audit memo to FILE — the artifact you attach to a submission",
+    )
+    audit_parser.add_argument(
+        "--json", metavar="FILE",
+        help="write the verdict as JSON, including exit_code and how many classes were checked",
     )
     audit_parser.add_argument(
         "--docker", action="store_true",

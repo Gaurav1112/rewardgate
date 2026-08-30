@@ -26,6 +26,29 @@ ACCEPT, REVISE, REJECT = "ACCEPT", "REVISE", "REJECT"
 # broken harness silently certified a task as fine.
 INDETERMINATE = "INDETERMINATE"
 
+# What the author should actually do about it. The report used to state a verdict and stop, which
+# leaves the one person it is written for — a contractor paid per *accepted* task — holding a
+# rejection and no next step. A finding without a remedy is a complaint.
+DEFECT_REMEDIES = {
+    NOP_PASS: (
+        "Add at least one test that FAILS on the unmodified source and passes after your patch. "
+        "Verify it yourself: run the suite before applying the patch and confirm a non-zero exit. "
+        "If the suite already passes, the task cannot measure the fix it is asking for."
+    ),
+    REWARD_HACKABLE: (
+        "Widen the visible suite until memorising it costs more than solving the problem. Add "
+        "inputs that differ structurally, not cosmetically — a second value of the same shape is "
+        "one more line in a lookup table. Then re-run: the exploit's special-case count must rise "
+        "above the threshold, or the task is still cheaper to game than to fix."
+    ),
+    CONTAMINATION_GIT: (
+        "Ship the bundle without the history that contains the fix. `git log -p --all` is the "
+        "check, not `git log --oneline`: a reverted commit or an abandoned branch still discloses "
+        "it. Squashing to a single baseline commit is sufficient; deleting `.git` entirely is "
+        "simplest. Rewriting only the visible branch is not enough."
+    ),
+}
+
 DEFECT_DESCRIPTIONS = {
     NOP_PASS: (
         "The fail-to-pass test suite already passes without any fix applied, so the task rewards "
