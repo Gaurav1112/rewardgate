@@ -7,5 +7,7 @@
   "hint_contamination": 79,
   "weak_assertions": 455,
   "assertion_parse_coverage": 1480,
-  "at_least_one_defect": 1061
+  "leakage_named_only_in_traceback": 203,
+  "at_least_one_defect": 1061,
+  "at_least_one_defect_strict": 945
 }

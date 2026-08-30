@@ -28,9 +28,25 @@ and deliverable against where it is met, with the declared gaps in one place.
 | # | Item | Where |
 |---|---|---|
 | 1 | Solution code + Improvement Changelog | the repository; [`IMPROVEMENT_CHANGELOG.md`](IMPROVEMENT_CHANGELOG.md) |
-| 2 | Reproduction guide | [`REPRODUCTION.md`](REPRODUCTION.md) — free path, no API key |
-| 3 | Solution video (≤5 min) | [`rewardgate-demo.mp4`](rewardgate-demo.mp4) (in this repo), script in [`docs/VIDEO_SCRIPT.md`](docs/VIDEO_SCRIPT.md) |
+| 2 | Reproduction guide | [`REPRODUCTION.md`](REPRODUCTION.md) — free path, no API key. Complete unedited terminal output for all eleven commands: [`docs/TERMINAL_SESSION.md`](docs/TERMINAL_SESSION.md) |
+| 3 | Solution video (≤5 min) | [`rewardgate-demo.mp4`](rewardgate-demo.mp4), 4:46 — script in [`docs/VIDEO_SCRIPT.md`](docs/VIDEO_SCRIPT.md). **The voice is macOS `say`, not a person** — see the note below |
 | 4 | Agent trajectories | [`AGENT_TRAJECTORIES.md`](AGENT_TRAJECTORIES.md) and [`trajectories/`](trajectories/) |
+
+### One thing to say before you watch the video
+
+The narration is synthetic — macOS `say`, the `Daniel` voice. You would notice within ten seconds,
+so it is better said here.
+
+It covers the voice and nothing else. The script is `docs/VIDEO_SCRIPT.md`, written and read
+verbatim. Every frame on screen is output this repository actually produced: `scripts/video/cap/`
+holds the captured `stdout` of the real commands and the slides are rendered from those files, so
+no number in the video was retyped into a mockup. `scripts/video/build.py` renders it and
+`scripts/video/README.md` documents what is and is not generated, including the one transcribed
+slide.
+
+A human reading is a better artifact and the tooling for it ships (`record_narration.py` replaces
+the twelve clips; `compose.py` re-times the slides to the new pacing). Not doing it before the
+deadline was a decision, not an oversight, and this is the trade being made rather than hidden.
 
 ## Baseline and advanced solution
 

@@ -47,11 +47,15 @@ of their figure.
 ### If you have eight minutes
 
 1. `uv run python -m rewardgate.report_real` — the 42% finding. Free, about a second, no API key.
-2. [`rewardgate-demo.mp4`](rewardgate-demo.mp4) — 4:46 walkthrough.
+2. [`rewardgate-demo.mp4`](rewardgate-demo.mp4) — 4:46 walkthrough. Synthetic narration; the
+   script is written and every frame is real captured output — see [SUBMISSION.md](SUBMISSION.md).
 3. [The ablation that refutes the headline](docs/EVALUATION.md#the-ablation-that-refutes-the-headline)
    — where I disproved my own result. `uv run python scripts/run_parity_ablation.py --replay`.
 4. [SUBMISSION.md](SUBMISSION.md) — the four deliverables, and every known defect in one place.
 5. [REQUIREMENTS.md](REQUIREMENTS.md) — every challenge requirement mapped to its implementation.
+6. [docs/TERMINAL_SESSION.md](docs/TERMINAL_SESSION.md) — every documented command, **complete and
+   unedited**: full output and real exit code for all eleven, nothing grepped. If you would rather
+   read the terminal than watch the video, that is the file.
 
 ---
 

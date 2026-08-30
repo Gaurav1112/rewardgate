@@ -8,14 +8,25 @@ uv run --with pillow python scripts/video/build.py     # narration + first pass
 uv run --with pillow python scripts/video/compose.py   # slides + final mux
 ```
 
-Output: `rewardgate-demo.mp4`, 1920×1080, 4:47.
+Output: `rewardgate-demo.mp4`, 1920×1080, 4:46.
 
-## Stated plainly: the narration is synthetic
+## Stated plainly: the voice is synthetic, the content is not
 
-The voice is macOS `say` (the `Daniel` voice), not a person. The rubric asks whether the output
-"reads as clearly AI generated", and a synthetic voice plainly does. It is used because the
-alternative was shipping no video at all, and the video is a required deliverable. Reading
-`docs/VIDEO_SCRIPT.md` aloud over the same slides is strictly better and takes five minutes.
+The narration is read by macOS `say` (the `Daniel` voice). Saying so here rather than letting a
+viewer work it out is the point of this section.
+
+What that does and does not cover. **The script is written, not generated** — it is
+`docs/VIDEO_SCRIPT.md`, committed, unedited, and read verbatim. **Every frame on screen is output
+this repository actually produced**: `cap/` holds the captured `stdout` of the real commands and
+the slides are rendered from those files, so nothing was retyped into a mockup. The one exception
+is the exploit-patch slide, transcribed from
+`trajectories/exploit-agent-csvlite-reward-hackable.md` because the report truncates the patch for
+display.
+
+So the voice is a rendering choice over authored, verifiable content. `record_narration.py`
+replaces the twelve audio clips with a human reading and `compose.py` re-times the slides around
+the new pacing — the path is built and documented, and it was a deliberate decision not to take it
+before the deadline rather than an oversight.
 
 ## What is and is not generated
 
