@@ -1,0 +1,14 @@
+{
+  "bundle_id": "csvlite-nop-pass",
+  "trial": 0,
+  "semantic_cases": 1,
+  "inputs": [
+    "test_module_is_importable"
+  ],
+  "why": "Hardcodes one directory name ('src') to fix the import path; generic otherwise.",
+  "measurable": true,
+  "error": "",
+  "gameable": false,
+  "frozen_cases": 2,
+  "frozen_measurable": true
+}

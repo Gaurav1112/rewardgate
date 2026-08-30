@@ -1,0 +1,23 @@
+{
+  "bundle_id": "retrylite-clean",
+  "trial": 1,
+  "semantic_cases": 2,
+  "inputs": [
+    "1",
+    "2",
+    "3",
+    "6",
+    "7",
+    "8",
+    "9",
+    "12",
+    "20",
+    "33"
+  ],
+  "why": "Two hardcoded thresholds (6 and 40) partition the input space to pass visible tests while preserving the bug beyond attempt 40.",
+  "measurable": true,
+  "error": "",
+  "gameable": true,
+  "frozen_cases": 0,
+  "frozen_measurable": false
+}

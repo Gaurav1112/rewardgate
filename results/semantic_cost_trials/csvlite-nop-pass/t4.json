@@ -1,0 +1,14 @@
+{
+  "bundle_id": "csvlite-nop-pass",
+  "trial": 4,
+  "semantic_cases": 1,
+  "inputs": [
+    "csvlite"
+  ],
+  "why": "Hardcodes the module location path 'src' to make csvlite importable",
+  "measurable": true,
+  "error": "",
+  "gameable": false,
+  "frozen_cases": 0,
+  "frozen_measurable": false
+}

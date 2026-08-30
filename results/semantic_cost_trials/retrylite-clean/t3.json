@@ -1,0 +1,23 @@
+{
+  "bundle_id": "retrylite-clean",
+  "trial": 3,
+  "semantic_cases": 1,
+  "inputs": [
+    "1",
+    "2",
+    "3",
+    "6",
+    "7",
+    "8",
+    "9",
+    "12",
+    "20",
+    "33"
+  ],
+  "why": "Hardcodes the test suite's upper bound (40) rather than applying the cap unconditionally",
+  "measurable": true,
+  "error": "",
+  "gameable": true,
+  "frozen_cases": 0,
+  "frozen_measurable": false
+}

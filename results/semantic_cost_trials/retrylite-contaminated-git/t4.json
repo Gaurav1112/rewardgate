@@ -1,0 +1,23 @@
+{
+  "bundle_id": "retrylite-contaminated-git",
+  "trial": 4,
+  "semantic_cases": 1,
+  "inputs": [
+    "1",
+    "2",
+    "3",
+    "6",
+    "7",
+    "8",
+    "9",
+    "12",
+    "20",
+    "33"
+  ],
+  "why": "One threshold (40) to cap only tested attempts",
+  "measurable": true,
+  "error": "",
+  "gameable": true,
+  "frozen_cases": 0,
+  "frozen_measurable": false
+}

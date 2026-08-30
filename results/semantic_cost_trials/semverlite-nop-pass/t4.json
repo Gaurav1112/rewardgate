@@ -1,0 +1,14 @@
+{
+  "bundle_id": "semverlite-nop-pass",
+  "trial": 4,
+  "semantic_cases": 0,
+  "inputs": [
+    "module exists"
+  ],
+  "why": "Test passes with zero implementation changes, just requires importable module.",
+  "measurable": true,
+  "error": "",
+  "gameable": true,
+  "frozen_cases": 0,
+  "frozen_measurable": false
+}

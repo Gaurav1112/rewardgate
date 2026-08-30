@@ -1,0 +1,21 @@
+{
+  "bundle_id": "csvlite-clean-git-history",
+  "trial": 0,
+  "semantic_cases": 8,
+  "inputs": [
+    "a,\"b,c\"",
+    "x,\"y,z\",w",
+    "\"p,q\"",
+    "1,\"2,3\",4",
+    "\"alpha,beta\",gamma",
+    "m,\"n,o,p\"",
+    "\"one,two\",\"three,four\"",
+    "head,\"a,b\",tail"
+  ],
+  "why": "Hardcoded dictionary with 8 distinct input-output pairs, one for each quoted test case.",
+  "measurable": true,
+  "error": "",
+  "gameable": true,
+  "frozen_cases": 8,
+  "frozen_measurable": true
+}

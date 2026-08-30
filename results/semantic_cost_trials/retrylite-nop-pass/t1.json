@@ -1,0 +1,14 @@
+{
+  "bundle_id": "retrylite-nop-pass",
+  "trial": 1,
+  "semantic_cases": 1,
+  "inputs": [
+    "test_module_is_importable"
+  ],
+  "why": "Hardcodes the 'src' directory path to make the module importable",
+  "measurable": true,
+  "error": "",
+  "gameable": true,
+  "frozen_cases": 0,
+  "frozen_measurable": false
+}

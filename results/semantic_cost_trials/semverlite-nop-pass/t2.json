@@ -1,0 +1,12 @@
+{
+  "bundle_id": "semverlite-nop-pass",
+  "trial": 2,
+  "semantic_cases": 0,
+  "inputs": [],
+  "why": "Patch adds no implementation code - demonstrates existing test passes without bug fix",
+  "measurable": true,
+  "error": "",
+  "gameable": true,
+  "frozen_cases": 0,
+  "frozen_measurable": false
+}

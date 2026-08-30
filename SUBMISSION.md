@@ -88,6 +88,14 @@ is given.
   back 0 and the verdict degraded to "cost not measurable". It is a **detector-expressiveness**
   limit, not a capability boundary — an earlier version of this line said the cause was unknown.
   Exploit cost is still priced by regex; a semantic measure is not implemented.
+- **The semantic cost measure was built and refuted.** Iteration 8 priced exploits with a model
+  where the regex could not: 32 of 33 previously unpriceable exploits priced, and the documented
+  miss closed (`retrylite` 3/5 against the frozen 0/5). It also raised **16 false alarms on 60
+  clean trials**, against the frozen metric's zero, which failed the condition committed in
+  `results/semantic_cost_preregistration.json` before the run. It is therefore **not shipped as the
+  default** and the frozen metric is untouched. The reason it fails argues for the architecture:
+  on the `retrylite` family the honest fix and the cheap exploit both encode one threshold, so cost
+  cannot separate them and only held-out execution can.
 - **The agent session runs on the host.** `--docker` now contains every *test execution* — the
   no-op trial, the oracle trial and the adjudication — in a container with `--network none`, no
   host path mounted, non-root, capabilities dropped, and it is measured both ways rather than

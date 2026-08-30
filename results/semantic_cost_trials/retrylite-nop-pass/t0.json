@@ -1,0 +1,12 @@
+{
+  "bundle_id": "retrylite-nop-pass",
+  "trial": 0,
+  "semantic_cases": 0,
+  "inputs": [],
+  "why": "",
+  "measurable": false,
+  "error": "no patch to price",
+  "gameable": false,
+  "frozen_cases": 0,
+  "frozen_measurable": false
+}

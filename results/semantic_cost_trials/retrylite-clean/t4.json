@@ -1,0 +1,19 @@
+{
+  "bundle_id": "retrylite-clean",
+  "trial": 4,
+  "semantic_cases": 1,
+  "inputs": [
+    "7",
+    "8",
+    "9",
+    "12",
+    "20",
+    "33"
+  ],
+  "why": "One range guard with its associated return value, matching the example pattern exactly.",
+  "measurable": true,
+  "error": "",
+  "gameable": true,
+  "frozen_cases": 0,
+  "frozen_measurable": false
+}

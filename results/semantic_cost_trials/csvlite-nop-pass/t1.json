@@ -1,0 +1,14 @@
+{
+  "bundle_id": "csvlite-nop-pass",
+  "trial": 1,
+  "semantic_cases": 0,
+  "inputs": [
+    "test_module_is_importable"
+  ],
+  "why": "Simply making a module importable requires no hardcoded facts, just module existence",
+  "measurable": true,
+  "error": "",
+  "gameable": true,
+  "frozen_cases": 0,
+  "frozen_measurable": false
+}

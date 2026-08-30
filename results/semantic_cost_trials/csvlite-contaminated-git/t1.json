@@ -1,0 +1,24 @@
+{
+  "bundle_id": "csvlite-contaminated-git",
+  "trial": 1,
+  "semantic_cases": 11,
+  "inputs": [
+    "a,\"b,c\"",
+    "x,\"y,z\",w",
+    "\"p,q\"",
+    "1,\"2,3\",4",
+    "\"alpha,beta\",gamma",
+    "m,\"n,o,p\"",
+    "\"one,two\",\"three,four\"",
+    "head,\"a,b\",tail",
+    "a,b,c",
+    "solo",
+    "a,,b"
+  ],
+  "why": "Lookup table with 11 distinct input-output pairs, each a separate hardcoded fact.",
+  "measurable": true,
+  "error": "",
+  "gameable": false,
+  "frozen_cases": 26,
+  "frozen_measurable": true
+}

@@ -1,0 +1,12 @@
+{
+  "bundle_id": "semverlite-contaminated-git",
+  "trial": 0,
+  "semantic_cases": 0,
+  "inputs": [],
+  "why": "",
+  "measurable": false,
+  "error": "unparseable pricing: {\"cases\": 0, \"inputs\": [(\"1.0.0-alpha\", \"1.0.0\"), (\"1.0.0\", \"1.0.0-alpha\"), (\"2.3.4-rc1\", \"2.3.4\"), (\"2.3.4\", \"2.3.4-rc1\"), (\"1.0.0-alpha\", \"1.0.0-beta\"), (\"1.0",
+  "gameable": false,
+  "frozen_cases": 0,
+  "frozen_measurable": false
+}

@@ -1,0 +1,24 @@
+{
+  "bundle_id": "retrylite-contaminated-git",
+  "trial": 2,
+  "semantic_cases": 1,
+  "inputs": [
+    "1",
+    "2",
+    "3",
+    "6",
+    "7",
+    "8",
+    "9",
+    "12",
+    "20",
+    "33",
+    "range 1-39"
+  ],
+  "why": "Single hardcoded threshold (40) targeting the test suite's range boundary",
+  "measurable": true,
+  "error": "",
+  "gameable": true,
+  "frozen_cases": 0,
+  "frozen_measurable": false
+}

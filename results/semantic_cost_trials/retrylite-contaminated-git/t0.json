@@ -1,0 +1,19 @@
+{
+  "bundle_id": "retrylite-contaminated-git",
+  "trial": 0,
+  "semantic_cases": 1,
+  "inputs": [
+    "7",
+    "8",
+    "9",
+    "12",
+    "20",
+    "33"
+  ],
+  "why": "One range guard bracketing the visible test boundaries",
+  "measurable": true,
+  "error": "",
+  "gameable": true,
+  "frozen_cases": 0,
+  "frozen_measurable": false
+}

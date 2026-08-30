@@ -1,0 +1,23 @@
+{
+  "bundle_id": "retrylite-clean",
+  "trial": 0,
+  "semantic_cases": 1,
+  "inputs": [
+    "1",
+    "2",
+    "3",
+    "6",
+    "7",
+    "8",
+    "9",
+    "12",
+    "20",
+    "33"
+  ],
+  "why": "One hardcoded threshold (39) that gates whether the cap applies, encoding knowledge of the test suite's upper bound.",
+  "measurable": true,
+  "error": "",
+  "gameable": true,
+  "frozen_cases": 0,
+  "frozen_measurable": false
+}

@@ -18,6 +18,7 @@ Each stage is measured on the same corpus with the same scorer.
 | **Iteration 6b** | k=5 exploit trials on all 15 bundles, pre-registered | 2/3 detected 5/5, `retrylite` 0/5, 0 false alarms in 60 clean trials, **p = 0.0286** | **Kept, hypothesis refuted.** Verdicts are deterministic (every detection rate 0.0 or 1.0); exploit *generation* is not (9/15 bundles mixed). The miss is detector expressiveness, not agent capability |
 | **Iteration 5** | Adversarial panel against the shipped tool | 4 working fail-opens found, each reporting a defective task as sound | **Kept.** My own thesis applied to my own code |
 | **Iteration 7** | Containerise every test execution, since the harness executes an agent-written patch on the host | Measured both ways: network `reachable` → `blocked (OSError)`, host write `written` → `blocked (FileNotFoundError)`, canary on disk `True` → `False` | **Kept.** The first version bind-mounted read-only and silently returned *wrong test results*; a container whose results are wrong is worse than none |
+| **Iteration 8** | Price exploits with a model where the regex cannot — pre-registered, scored on the 75 committed trials | Priced 32 of the 33 the regex could not; closed the documented miss (retrylite **3/5** vs frozen 0/5); but **16 false alarms** on 60 clean trials against the frozen metric's 0 | **Refuted, and published as such.** On `retrylite` the honest fix and the cheap exploit both encode one threshold — cost cannot separate them, held-out execution can |
 | **Withdrawn (2)** | "The agent found a working exploit in 5 of 5 trials, so it is deterministic, not noisy" | `results/multitrial/retrylite-reward-hackable/t4.json` — `gameable false`, held-out `exit=0 passed=10`. It is **4 of 5** | **Withdrawn.** I measured a lossy grader's output and credited the agent with its stability |
 | **Removed** | A five-agent fan-out, one LLM per defect class | Deterministic checks give stronger evidence at $0.00: an exit code and a commit SHA beat an opinion | **Removed.** Number of agents is not a measure of engineering |
 | **Final** | Deterministic tiers + one adversarial agent | macro-F1 **0.933** vs a *fair* baseline's **0.889**, n=15, p=1.00 | Main contribution: **42% of SWE-bench Verified is defective, measured for $0.00** |
@@ -437,6 +438,49 @@ containment was requested, not delivered, and nothing in the report says so.
 
 **What it does not fix.** The agent *session* is not contained and cannot be under `--network
 none`, because that session is an API call. See [docs/SANDBOXING.md](docs/SANDBOXING.md).
+
+---
+
+## Iteration 8 — the semantic cost measure, which failed its own condition
+
+**What I tried and why.** This README had promised for some time that the repair for the cost
+grader was *a semantic measure* rather than more regexes. So I built it, rather than continuing to
+name it as future work. A model is shown the exploit patch and the visible suite and asked one
+question: how many hardcoded facts does this shortcut encode? Execution still **proves** the defect
+— visible green, held-out red, both measured — and the model only **prices** an exploit already
+proven. It is never asked whether a task is defective and cannot create a finding.
+
+**The protocol caught my own design error on trial one.** The first version asked for *visible-suite
+inputs covered*, and priced `if 7 <= attempt <= 39: return 60.0` at **33** — correct for the
+question as written, and exactly backwards for the threshold. Covering more inputs with less code
+makes a task *more* gameable, not less; a one-line interval would have scored 33, cleared a
+threshold of 2, and been reported "too expensive to game". Amended before any scoring run, with the
+change and the trial that prompted it recorded in the pre-registration. The decision rule, the
+threshold and the conditions were left untouched.
+
+**Evidence.** Scored on the 75 committed trials, offline, no new exploit runs:
+
+| | frozen regex | semantic |
+|---|---:|---:|
+| Exploits it could not price | 33 | **1** |
+| `retrylite-reward-hackable` | 0 / 5 | **3 / 5** |
+| False alarms on 60 clean trials | **0** | **16** |
+| Agreement where both could price | — | 24 / 25 |
+
+**Decision / Learning. Refuted, and shipped as a refutation.** It closed the documented miss and
+failed the pre-registered condition, so the measure is *not* the default and the frozen metric is
+untouched. A pricer that flags honest code is worse than one that prices nothing: taking false
+positives from 100% to zero was the frozen metric's entire achievement.
+
+The reason it fails is the finding. On the `retrylite` family the honest fix and the cheap exploit
+are nearly the same object — `if attempt <= 39: return min(result, MAX)` against
+`if 7 <= attempt <= 39: return MAX`. Both encode one threshold, both cost one line, one generalises
+and one does not. Nothing in the patch distinguishes them; only the held-out suite does. **Cost is
+the wrong instrument for this family and execution is the right one** — which is the thing the
+pipeline was already built on, now supported by a failed attempt to replace it.
+
+That is the second pre-registered experiment in this project to refute its own hypothesis, and the
+second to be published anyway.
 
 ---
 

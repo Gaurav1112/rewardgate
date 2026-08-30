@@ -230,3 +230,31 @@ def test_the_rendered_video_is_not_stale(collected_test_count):
         "Re-render: uv run --with pillow python scripts/video/build.py && "
         "uv run --with pillow python scripts/video/compose.py"
     )
+
+
+def test_the_semantic_cost_experiment_is_reported_as_refuted():
+    """Iteration 8 failed its own pre-registered condition, and must stay reported that way.
+
+    It closes the documented miss (retrylite 3/5, frozen 0/5) and raises 16 false alarms on 60
+    clean trials, where the frozen metric raises zero. The refutation is the finding; a later edit
+    that quietly reports only the first half would be the exact selective reporting the
+    pre-registration exists to prevent.
+    """
+    result = ROOT / "results" / "semantic_cost.json"
+    if not result.exists():
+        pytest.skip("run: uv run python scripts/score_semantic_cost.py")
+    data = json.loads(result.read_text())
+
+    assert data["success_condition_met"] is False
+    assert data["retrylite_detections"] >= 2, "it did close the miss; that half must stay true too"
+    assert data["false_alarms_on_clean"] > 0, "the refuting half must not vanish"
+    assert data["priced_by_model"] >= 30, "the model priced what the regex could not"
+
+    # The frozen result is frozen. Nothing in this experiment may rewrite it.
+    frozen = json.loads((ROOT / "results" / "multitrial.json").read_text())
+    assert frozen["permutation_p"] == 0.0286
+    assert frozen["multi_trial_false_positives"] == 0
+
+    for doc in (README, ROOT / "SUBMISSION.md"):
+        text = doc.read_text()
+        assert "16" in text and "refut" in text.lower(), f"{doc.name} must report the refutation"

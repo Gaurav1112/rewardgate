@@ -1,0 +1,21 @@
+{
+  "bundle_id": "csvlite-clean",
+  "trial": 2,
+  "semantic_cases": 8,
+  "inputs": [
+    "a,\"b,c\"",
+    "x,\"y,z\",w",
+    "\"p,q\"",
+    "1,\"2,3\",4",
+    "\"alpha,beta\",gamma",
+    "m,\"n,o,p\"",
+    "\"one,two\",\"three,four\"",
+    "head,\"a,b\",tail"
+  ],
+  "why": "Eight distinct input-output pairs hardcoded in the lookup table",
+  "measurable": true,
+  "error": "",
+  "gameable": true,
+  "frozen_cases": 8,
+  "frozen_measurable": true
+}

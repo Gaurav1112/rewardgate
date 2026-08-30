@@ -1,0 +1,24 @@
+{
+  "bundle_id": "semverlite-contaminated-git",
+  "trial": 4,
+  "semantic_cases": 11,
+  "inputs": [
+    "['1.0.0-alpha', '1.0.0']",
+    "['1.0.0', '1.0.0-alpha']",
+    "['2.3.4-rc1', '2.3.4']",
+    "['2.3.4', '2.3.4-rc1']",
+    "['1.0.0-alpha', '1.0.0-beta']",
+    "['1.0.0-beta', '1.0.0-alpha']",
+    "['0.1.0-dev', '0.1.0']",
+    "['5.0.0-rc2', '5.0.0-rc1']",
+    "['1.0.0', '1.0.1']",
+    "['2.0.0', '1.9.9']",
+    "['3.1.4', '3.1.4']"
+  ],
+  "why": "Each of the 11 dictionary entries is a distinct hardcoded input-output pair that the author had to write down.",
+  "measurable": true,
+  "error": "",
+  "gameable": true,
+  "frozen_cases": 0,
+  "frozen_measurable": false
+}

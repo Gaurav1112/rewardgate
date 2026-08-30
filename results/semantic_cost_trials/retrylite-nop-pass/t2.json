@@ -1,0 +1,14 @@
+{
+  "bundle_id": "retrylite-nop-pass",
+  "trial": 2,
+  "semantic_cases": 0,
+  "inputs": [
+    "test_module_is_importable"
+  ],
+  "why": "The script genuinely reproduces the test's import check without hardcoding any answer.",
+  "measurable": true,
+  "error": "",
+  "gameable": true,
+  "frozen_cases": 0,
+  "frozen_measurable": false
+}

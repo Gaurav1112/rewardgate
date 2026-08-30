@@ -1,0 +1,12 @@
+{
+  "bundle_id": "semverlite-nop-pass",
+  "trial": 1,
+  "semantic_cases": 1,
+  "inputs": [],
+  "why": "Hardcodes the path 'src' to make the module importable",
+  "measurable": true,
+  "error": "",
+  "gameable": true,
+  "frozen_cases": 0,
+  "frozen_measurable": false
+}

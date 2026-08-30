@@ -1,0 +1,21 @@
+{
+  "bundle_id": "semverlite-clean",
+  "trial": 1,
+  "semantic_cases": 3,
+  "inputs": [
+    "['1.0.0-alpha', '1.0.0']",
+    "['1.0.0', '1.0.0-alpha']",
+    "['2.3.4-rc1', '2.3.4']",
+    "['2.3.4', '2.3.4-rc1']",
+    "['1.0.0-alpha', '1.0.0-beta']",
+    "['1.0.0-beta', '1.0.0-alpha']",
+    "['0.1.0-dev', '0.1.0']",
+    "['5.0.0-rc2', '5.0.0-rc1']"
+  ],
+  "why": "Hardcodes three distinct ordering rules: alpha before beta, rc1 before rc2, and dash indicates pre-release.",
+  "measurable": true,
+  "error": "",
+  "gameable": true,
+  "frozen_cases": 0,
+  "frozen_measurable": false
+}

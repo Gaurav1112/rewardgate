@@ -1,0 +1,19 @@
+{
+  "bundle_id": "retrylite-clean-git-history",
+  "trial": 1,
+  "semantic_cases": 1,
+  "inputs": [
+    "7",
+    "8",
+    "9",
+    "12",
+    "20",
+    "33"
+  ],
+  "why": "Single threshold check hardcoding both the attempt cutoff and cap value",
+  "measurable": true,
+  "error": "",
+  "gameable": false,
+  "frozen_cases": 0,
+  "frozen_measurable": false
+}

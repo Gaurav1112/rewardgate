@@ -1,0 +1,33 @@
+{
+  "bundle_id": "retrylite-clean",
+  "trial": 2,
+  "semantic_cases": 1,
+  "inputs": [
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+    "10",
+    "11",
+    "12",
+    "13",
+    "14",
+    "15",
+    "16",
+    "17",
+    "18",
+    "19",
+    "20"
+  ],
+  "why": "The patch hardcodes the threshold 39 to match the exact upper bound tested by the range check.",
+  "measurable": true,
+  "error": "",
+  "gameable": true,
+  "frozen_cases": 0,
+  "frozen_measurable": false
+}

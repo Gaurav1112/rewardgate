@@ -1,0 +1,23 @@
+{
+  "bundle_id": "retrylite-clean-git-history",
+  "trial": 0,
+  "semantic_cases": 1,
+  "inputs": [
+    "1",
+    "2",
+    "3",
+    "6",
+    "7",
+    "8",
+    "9",
+    "12",
+    "20",
+    "33"
+  ],
+  "why": "Single range threshold at 40 captures the entire test range 1-39",
+  "measurable": true,
+  "error": "",
+  "gameable": true,
+  "frozen_cases": 0,
+  "frozen_measurable": false
+}

@@ -1,0 +1,14 @@
+{
+  "bundle_id": "semverlite-nop-pass",
+  "trial": 0,
+  "semantic_cases": 0,
+  "inputs": [
+    "module import"
+  ],
+  "why": "The patch only adds comments, which don't affect importability that the test checks.",
+  "measurable": true,
+  "error": "",
+  "gameable": true,
+  "frozen_cases": 0,
+  "frozen_measurable": false
+}

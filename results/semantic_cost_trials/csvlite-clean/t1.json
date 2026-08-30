@@ -1,0 +1,12 @@
+{
+  "bundle_id": "csvlite-clean",
+  "trial": 1,
+  "semantic_cases": 0,
+  "inputs": [],
+  "why": "",
+  "measurable": false,
+  "error": "unparseable pricing: {\"cases\": 11, \"inputs\": ['a,\"b,c\"', 'x,\"y,z\",w', '\"p,q\"', '1,\"2,3\",4', '\"alpha,beta\",gamma', 'm,\"n,o,p\"', '\"one,two\",\"three,four\"', 'head,\"a,b\",tail', \"a,b,c\", ",
+  "gameable": true,
+  "frozen_cases": 11,
+  "frozen_measurable": true
+}

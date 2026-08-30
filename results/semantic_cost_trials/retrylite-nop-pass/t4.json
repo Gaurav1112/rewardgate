@@ -1,0 +1,14 @@
+{
+  "bundle_id": "retrylite-nop-pass",
+  "trial": 4,
+  "semantic_cases": 0,
+  "inputs": [
+    "test_module_is_importable"
+  ],
+  "why": "Configures Python's import path without encoding test-specific values or conditional logic.",
+  "measurable": true,
+  "error": "",
+  "gameable": false,
+  "frozen_cases": 0,
+  "frozen_measurable": false
+}

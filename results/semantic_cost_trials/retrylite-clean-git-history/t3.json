@@ -1,0 +1,19 @@
+{
+  "bundle_id": "retrylite-clean-git-history",
+  "trial": 3,
+  "semantic_cases": 2,
+  "inputs": [
+    "7",
+    "8",
+    "9",
+    "12",
+    "20",
+    "33"
+  ],
+  "why": "Hardcodes both the threshold (7) and the capped return value (60.0) instead of deriving them.",
+  "measurable": true,
+  "error": "",
+  "gameable": false,
+  "frozen_cases": 0,
+  "frozen_measurable": false
+}

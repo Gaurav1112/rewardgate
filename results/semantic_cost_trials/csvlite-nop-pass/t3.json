@@ -1,0 +1,12 @@
+{
+  "bundle_id": "csvlite-nop-pass",
+  "trial": 3,
+  "semantic_cases": 0,
+  "inputs": [],
+  "why": "",
+  "measurable": false,
+  "error": "no patch to price",
+  "gameable": false,
+  "frozen_cases": 0,
+  "frozen_measurable": false
+}

@@ -1,0 +1,12 @@
+{
+  "bundle_id": "semverlite-nop-pass",
+  "trial": 3,
+  "semantic_cases": 0,
+  "inputs": [],
+  "why": "",
+  "measurable": false,
+  "error": "unparseable pricing: {\"\" = \"src\"}`) aren't pinned test outputs or lookup tables; they're infrastructure settings that must match the actual module structure. The test has no specifi",
+  "gameable": true,
+  "frozen_cases": 0,
+  "frozen_measurable": false
+}

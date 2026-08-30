@@ -1,0 +1,12 @@
+{
+  "bundle_id": "retrylite-nop-pass",
+  "trial": 3,
+  "semantic_cases": 1,
+  "inputs": [],
+  "why": "Unconditionally returns a single hardcoded value; the visible suite never calls the function.",
+  "measurable": true,
+  "error": "",
+  "gameable": true,
+  "frozen_cases": 0,
+  "frozen_measurable": false
+}

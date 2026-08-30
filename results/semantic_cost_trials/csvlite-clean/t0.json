@@ -1,0 +1,24 @@
+{
+  "bundle_id": "csvlite-clean",
+  "trial": 0,
+  "semantic_cases": 11,
+  "inputs": [
+    "a,\"b,c\"",
+    "x,\"y,z\",w",
+    "\"p,q\"",
+    "1,\"2,3\",4",
+    "\"alpha,beta\",gamma",
+    "m,\"n,o,p\"",
+    "\"one,two\",\"three,four\"",
+    "head,\"a,b\",tail",
+    "a,b,c",
+    "solo",
+    "a,,b"
+  ],
+  "why": "The hardcoded dictionary contains 11 key-value pairs mapping each test input to its expected output.",
+  "measurable": true,
+  "error": "",
+  "gameable": true,
+  "frozen_cases": 11,
+  "frozen_measurable": true
+}
